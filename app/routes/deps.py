@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import Depends, Path
+from fastapi import Depends, Path, Query
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,6 +12,14 @@ SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 ClienteId = Annotated[int, Path(description="Id do cliente.", examples=[1])]
 LojaId = Annotated[int, Path(description="Id da loja.", examples=[1])]
+
+# Paginação comum a todas as listas (ver docs/adr/0006).
+LIMITE_PADRAO = 20
+LIMITE_MAXIMO = 50
+Limite = Annotated[int, Query(ge=1, le=LIMITE_MAXIMO, description="Quantidade de itens (1 a 50).")]
+Cursor = Annotated[
+    str | None, Query(max_length=200, description="`proximo_cursor` da página anterior.")
+]
 
 # auto_error=False: sem token, quem responde é NaoAutenticadoError, no formato padrão.
 _oauth2_cliente = OAuth2PasswordBearer(

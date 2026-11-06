@@ -1,10 +1,19 @@
+from sqlalchemy import func, select, tuple_
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ConflitoError, NaoEncontradoError
+from app.core.paginacao import codificar_id, codificar_posicao, decodificar_id, decodificar_posicao
 from app.core.security import gerar_hash_senha
-from app.models import Loja, Novidade
-from app.schemas import LojaCriar, NovidadeCriar
+from app.models import Loja, Novidade, Seguidor
+from app.schemas import (
+    LojaCriar,
+    LojaDetalhe,
+    LojaPublica,
+    NovidadeCriar,
+    NovidadeOut,
+    Pagina,
+)
 
 
 async def obter_loja(session: AsyncSession, loja_id: int) -> Loja:
@@ -37,3 +46,63 @@ async def publicar_novidade(session: AsyncSession, loja_id: int, dados: Novidade
     session.add(novidade)
     await session.commit()
     return novidade
+
+
+def _escapar_like(termo: str) -> str:
+    return termo.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+async def listar_lojas(
+    session: AsyncSession, limite: int, cursor: str | None, busca: str | None
+) -> Pagina[LojaPublica]:
+    """Lojas em ordem de cadastro (id crescente), com busca opcional por parte do nome."""
+    stmt = select(Loja).order_by(Loja.id).limit(limite + 1)
+    if cursor:
+        stmt = stmt.where(Loja.id > decodificar_id(cursor))
+    if busca:
+        stmt = stmt.where(Loja.nome.ilike(f"%{_escapar_like(busca)}%", escape="\\"))
+    lojas = list(await session.scalars(stmt))
+
+    tem_mais = len(lojas) > limite
+    lojas = lojas[:limite]
+    return Pagina[LojaPublica](
+        itens=[LojaPublica.model_validate(loja) for loja in lojas],
+        proximo_cursor=codificar_id(lojas[-1].id) if tem_mais else None,
+    )
+
+
+async def detalhar_loja(session: AsyncSession, loja_id: int) -> LojaDetalhe:
+    loja = await obter_loja(session, loja_id)
+    # COUNT pelo índice ix_seguidores_loja_id (index-only scan): ~ms mesmo com 100 mil.
+    total = await session.scalar(
+        select(func.count()).select_from(Seguidor).where(Seguidor.loja_id == loja_id)
+    )
+    return LojaDetalhe(
+        id=loja.id, nome=loja.nome, criado_em=loja.criado_em, total_seguidores=total or 0
+    )
+
+
+async def listar_novidades(
+    session: AsyncSession, loja_id: int, limite: int, cursor: str | None
+) -> Pagina[NovidadeOut]:
+    """Novidades de uma loja, mais recente primeiro; usa o mesmo índice do feed."""
+    await obter_loja(session, loja_id)
+    stmt = (
+        select(Novidade)
+        .where(Novidade.loja_id == loja_id)
+        .order_by(Novidade.criado_em.desc(), Novidade.id.desc())
+        .limit(limite + 1)
+    )
+    if cursor:
+        stmt = stmt.where(
+            tuple_(Novidade.criado_em, Novidade.id) < tuple_(*decodificar_posicao(cursor))
+        )
+    novidades = list(await session.scalars(stmt))
+
+    tem_mais = len(novidades) > limite
+    novidades = novidades[:limite]
+    ultimo = novidades[-1] if tem_mais else None
+    return Pagina[NovidadeOut](
+        itens=[NovidadeOut.model_validate(n) for n in novidades],
+        proximo_cursor=codificar_posicao(ultimo.criado_em, ultimo.id) if ultimo else None,
+    )

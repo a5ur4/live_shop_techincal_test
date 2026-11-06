@@ -16,3 +16,15 @@ class LojaOut(Saida):
     nome: str
     email: str
     criado_em: datetime
+
+
+class LojaPublica(Saida):
+    """Dados públicos da loja (sem e-mail de login)."""
+
+    id: int
+    nome: str
+    criado_em: datetime
+
+
+class LojaDetalhe(LojaPublica):
+    total_seguidores: int

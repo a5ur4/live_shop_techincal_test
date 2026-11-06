@@ -31,3 +31,12 @@ class Saida(BaseModel):
     """Resposta: pode ser montada direto de um objeto ORM."""
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class Pagina[T](BaseModel):
+    """Lista paginada por cursor (ver docs/adr/0006)."""
+
+    itens: list[T]
+    proximo_cursor: str | None = Field(
+        description="Envie em `cursor` para buscar a próxima página; `null` quando não há mais."
+    )

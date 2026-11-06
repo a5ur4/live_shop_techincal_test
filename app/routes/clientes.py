@@ -1,17 +1,12 @@
-from typing import Annotated
-
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, status
 
 from app.core.errors import respostas_erro
-from app.routes.deps import ClienteAutenticado, LojaId, SessionDep
-from app.schemas import ClienteCriar, ClienteOut, FeedOut, SeguindoOut
+from app.routes.deps import LIMITE_PADRAO, ClienteAutenticado, Cursor, Limite, LojaId, SessionDep
+from app.schemas import ClienteCriar, ClienteOut, FeedOut, LojaSeguida, Pagina, SeguindoOut
 from app.services import clientes as service
 from app.services import feed as feed_service
 
 router = APIRouter(prefix="/clientes", tags=["Clientes"])
-
-LIMITE_PADRAO = 20
-LIMITE_MAXIMO = 50
 
 
 @router.post(
@@ -73,12 +68,23 @@ async def deixar_de_seguir(
 async def feed(
     cliente_id: ClienteAutenticado,
     session: SessionDep,
-    limite: Annotated[
-        int, Query(ge=1, le=LIMITE_MAXIMO, description="Quantidade de itens (1 a 50).")
-    ] = LIMITE_PADRAO,
-    cursor: Annotated[
-        str | None,
-        Query(max_length=200, description="`proximo_cursor` da página anterior."),
-    ] = None,
+    limite: Limite = LIMITE_PADRAO,
+    cursor: Cursor = None,
 ):
     return await feed_service.montar_feed(session, cliente_id, limite, cursor)
+
+
+@router.get(
+    "/{cliente_id}/seguindo",
+    response_model=Pagina[LojaSeguida],
+    responses=respostas_erro("nao_autenticado", "acesso_negado", "entrada_invalida"),
+    summary="Lojas que o cliente segue",
+    description="Das seguidas mais recentemente para as mais antigas, paginado por cursor.",
+)
+async def listar_seguindo(
+    cliente_id: ClienteAutenticado,
+    session: SessionDep,
+    limite: Limite = LIMITE_PADRAO,
+    cursor: Cursor = None,
+):
+    return await service.listar_seguindo(session, cliente_id, limite, cursor)

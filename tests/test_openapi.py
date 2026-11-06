@@ -10,6 +10,10 @@ ROTAS_ESPERADAS = {
     ("post", "/auth/clientes/token"),
     ("post", "/auth/lojas/token"),
     ("post", "/lojas"),
+    ("get", "/lojas"),
+    ("get", "/lojas/{loja_id}"),
+    ("get", "/lojas/{loja_id}/novidades"),
+    ("get", "/clientes/{cliente_id}/seguindo"),
     ("post", "/lojas/{loja_id}/novidades"),
     ("post", "/clientes"),
     ("post", "/clientes/{cliente_id}/seguindo/{loja_id}"),
@@ -43,6 +47,7 @@ ROTAS_PROTEGIDAS = {
     ("post", "/clientes/{cliente_id}/seguindo/{loja_id}"): "Cliente",
     ("delete", "/clientes/{cliente_id}/seguindo/{loja_id}"): "Cliente",
     ("get", "/clientes/{cliente_id}/feed"): "Cliente",
+    ("get", "/clientes/{cliente_id}/seguindo"): "Cliente",
 }
 
 

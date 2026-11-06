@@ -79,6 +79,21 @@ Authorization: Bearer {{tokenCliente}}
 GET {{base}}/clientes/{{clienteId}}/feed?limite=1&cursor={{feed.response.body.proximo_cursor}}
 Authorization: Bearer {{tokenCliente}}
 
+### --- Leitura ---
+
+### Lista lojas (público, paginado; q filtra por nome)
+GET {{base}}/lojas?limite=10&q=loja
+
+### Detalhes públicos de uma loja (com total de seguidores)
+GET {{base}}/lojas/{{lojaId}}
+
+### Novidades de uma loja (público, paginado)
+GET {{base}}/lojas/{{lojaId}}/novidades?limite=10
+
+### Lojas que o cliente segue
+GET {{base}}/clientes/{{clienteId}}/seguindo
+Authorization: Bearer {{tokenCliente}}
+
 ### --- Erros (todos no mesmo formato) ---
 
 ### 401: sem token
