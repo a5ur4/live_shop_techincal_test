@@ -17,13 +17,15 @@ foi adicionada por decisão do time (ADR 0007).
 ```bash
 make up            # Docker: Postgres + API em :8000 (migrations automáticas)
 make seed          # dados de exemplo no banco do Docker
-make db            # só o Postgres (para rodar API/testes com uv)
+make db            # Postgres + Redis (para rodar API/testes com uv)
 make dev           # API local com reload (uv)
 make test          # testes com uv (sobe o Postgres se preciso)
 make test-docker   # testes só com Docker
 make lint          # ruff check + format --check
 make format        # corrige lint/format
 make check         # lint + testes — rode antes de todo commit
+make benchmark     # feed com loja de 100 mil seguidores (banco feed_bench) — rode antes/depois
+                   # de mexer na query do feed e atualize a tabela do ADR 0008
 make migration m="descricao"   # gera migration a partir de app/models/
 ```
 
@@ -36,7 +38,9 @@ app/routes/     HTTP fino: rota, status code, parâmetros, `responses=respostas_
 app/services/   regra de negócio + queries; levanta AppError; faz commit
 app/models/     tabelas SQLAlchemy, um arquivo por entidade (constraints e índices aqui)
 app/schemas/    Pydantic por recurso: entrada (`Entrada`, extra="forbid") e saída (`Saida`)
-app/core/       config (env), db (engine/sessão), security (JWT, hash de senha), errors
+app/core/       config (env), db, redis (ResilientRedis), security (JWT, senha),
+                paginacao (cursores), errors
+scripts/        benchmark do feed
 ```
 
 Dependências só vão para baixo: `routes → services → models`. Rotas **não** acessam o banco
@@ -54,6 +58,15 @@ direto; services **não** importam FastAPI (exceto via `app.core.errors`).
   em nome de uma loja, `loja_id: LojaAutenticada` (`app/routes/deps.py`). Isso valida o
   token e o dono do id; não reimplemente essa checagem na rota ou no service. Rotas públicas
   (cadastro, login, health) usam `ClienteId`/`LojaId` ou nenhum id. Ver ADR 0007.
+- **Rotas `/me`**: mesma regra, mas a conta vem do token: `ClienteAtual`, `LojaAtual` ou
+  `ContaAtual` (qualquer tipo). Funcionalidade nova para a conta logada deve ter as duas
+  versões (`/clientes/{id}/...` e `/me/...`) chamando o mesmo service.
+- **Listas**: sempre paginadas por cursor com `Limite`/`Cursor` de `deps.py`, resposta
+  `Pagina[T]`, codec em `app/core/paginacao.py` (busque `limite + 1` para saber se há mais).
+- **Redis** (`RedisDep`): só via `ResilientRedis.executar(..., padrao, ...)`; a API precisa
+  funcionar com o Redis fora. Nada que seja fonte da verdade vai para o Redis.
+- **Cache do feed**: qualquer mudança que altere *quais lojas* o cliente segue precisa
+  chamar `cache_feed.invalidar(redis, cliente_id)` **depois** do commit.
 - **Segredos**: senha só entra como hash (`gerar_hash_senha`) e nunca sai em resposta.
   `JWT_SECRET` vem do ambiente; nunca escreva chave real em código, teste ou `.env.example`.
 - **Unicidade**: use `insert(...).on_conflict_do_nothing(...).returning(...)` e trate `None`
@@ -109,7 +122,13 @@ direto; services **não** importam FastAPI (exceto via `app.core.errors`).
 - `Preco` é normalizado para 2 casas no schema, para a resposta do POST bater com o banco.
 - `app.core.security` lê `JWT_SECRET` no import; sem ela, gera chave aleatória por processo
   (cada worker teria uma chave diferente — em produção, sempre defina).
-- O form do login é OAuth2 (`username`/`password`, `x-www-form-urlencoded`), não JSON.
+- O form do login é OAuth2 (`username`/`password`, `x-www-form-urlencoded`), não JSON;
+  `/auth/refresh` e `/auth/logout` recebem JSON `{"refresh_token"}`.
+- Testes do feed que leem, publicam e leem de novo vão ver o cache (`X-Cache: HIT`): apague
+  `feed:{id}` no Redis (fixture `redis`) ou use cursor.
+- Rate limit conta falhas por IP; nos testes todo mundo é `127.0.0.1` e o Redis de teste é
+  esvaziado a cada teste. Sem Redis, o fallback em memória (`rate_limit._local`) persiste no
+  processo — a fixture `sem_redis` de `test_sessao.py` o reinicia.
 - `alembic.ini` não tem URL: `migrations/env.py` lê `DATABASE_URL`; os testes injetam a URL
   de teste via `sqlalchemy.url`.
 

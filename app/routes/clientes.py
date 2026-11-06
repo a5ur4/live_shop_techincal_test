@@ -1,17 +1,20 @@
-from typing import Annotated
-
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Response, status
 
 from app.core.errors import respostas_erro
-from app.routes.deps import ClienteAutenticado, LojaId, SessionDep
-from app.schemas import ClienteCriar, ClienteOut, FeedOut, SeguindoOut
+from app.routes.deps import (
+    LIMITE_PADRAO,
+    ClienteAutenticado,
+    Cursor,
+    Limite,
+    LojaId,
+    RedisDep,
+    SessionDep,
+)
+from app.schemas import ClienteCriar, ClienteOut, FeedOut, LojaSeguida, Pagina, SeguindoOut
 from app.services import clientes as service
 from app.services import feed as feed_service
 
 router = APIRouter(prefix="/clientes", tags=["Clientes"])
-
-LIMITE_PADRAO = 20
-LIMITE_MAXIMO = 50
 
 
 @router.post(
@@ -38,8 +41,10 @@ async def criar_cliente(dados: ClienteCriar, session: SessionDep):
     ),
     summary="Cliente passa a seguir uma loja",
 )
-async def seguir_loja(cliente_id: ClienteAutenticado, loja_id: LojaId, session: SessionDep):
-    return await service.seguir_loja(session, cliente_id, loja_id)
+async def seguir_loja(
+    cliente_id: ClienteAutenticado, loja_id: LojaId, session: SessionDep, redis: RedisDep
+):
+    return await service.seguir_loja(session, redis, cliente_id, loja_id)
 
 
 @router.delete(
@@ -55,9 +60,9 @@ async def seguir_loja(cliente_id: ClienteAutenticado, loja_id: LojaId, session: 
     summary="Cliente deixa de seguir uma loja",
 )
 async def deixar_de_seguir(
-    cliente_id: ClienteAutenticado, loja_id: LojaId, session: SessionDep
+    cliente_id: ClienteAutenticado, loja_id: LojaId, session: SessionDep, redis: RedisDep
 ) -> None:
-    await service.deixar_de_seguir(session, cliente_id, loja_id)
+    await service.deixar_de_seguir(session, redis, cliente_id, loja_id)
 
 
 @router.get(
@@ -67,18 +72,36 @@ async def deixar_de_seguir(
     summary="Feed com as novidades das lojas seguidas",
     description=(
         "Novidades das lojas que o cliente segue, da mais recente para a mais antiga. "
-        "Para a próxima página, repita a chamada com `cursor=<proximo_cursor>`."
+        "Para a próxima página, repita a chamada com `cursor=<proximo_cursor>`.\n\n"
+        "Header `X-Cache`: `HIT` (primeira página vinda do cache), `MISS` (calculada e "
+        "guardada) ou `BYPASS` (páginas com cursor). Novidades novas aparecem em até 30s; "
+        "seguir ou deixar de seguir atualiza na hora."
     ),
 )
 async def feed(
     cliente_id: ClienteAutenticado,
     session: SessionDep,
-    limite: Annotated[
-        int, Query(ge=1, le=LIMITE_MAXIMO, description="Quantidade de itens (1 a 50).")
-    ] = LIMITE_PADRAO,
-    cursor: Annotated[
-        str | None,
-        Query(max_length=200, description="`proximo_cursor` da página anterior."),
-    ] = None,
+    redis: RedisDep,
+    response: Response,
+    limite: Limite = LIMITE_PADRAO,
+    cursor: Cursor = None,
 ):
-    return await feed_service.montar_feed(session, cliente_id, limite, cursor)
+    feed, status_cache = await feed_service.ler_feed(session, redis, cliente_id, limite, cursor)
+    response.headers["X-Cache"] = status_cache
+    return feed
+
+
+@router.get(
+    "/{cliente_id}/seguindo",
+    response_model=Pagina[LojaSeguida],
+    responses=respostas_erro("nao_autenticado", "acesso_negado", "entrada_invalida"),
+    summary="Lojas que o cliente segue",
+    description="Das seguidas mais recentemente para as mais antigas, paginado por cursor.",
+)
+async def listar_seguindo(
+    cliente_id: ClienteAutenticado,
+    session: SessionDep,
+    limite: Limite = LIMITE_PADRAO,
+    cursor: Cursor = None,
+):
+    return await service.listar_seguindo(session, cliente_id, limite, cursor)

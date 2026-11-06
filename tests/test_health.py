@@ -1,11 +1,23 @@
 from sqlalchemy.exc import OperationalError
 
 from app.core.db import get_session
+from app.core.redis import get_redis
 from app.main import app
 from tests.helpers import assert_erro
 
 
 async def test_health_ok(client):
+    resp = await client.get("/health")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "ok", "banco": "ok"}
+
+
+async def test_health_sem_redis_continua_200_sem_expor_o_motivo(client):
+    from app.core.redis import ResilientRedis
+
+    app.dependency_overrides[get_redis] = lambda: ResilientRedis(None)
+
     resp = await client.get("/health")
 
     assert resp.status_code == 200

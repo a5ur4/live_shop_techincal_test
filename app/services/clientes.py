@@ -1,11 +1,14 @@
-from sqlalchemy import delete
+from sqlalchemy import delete, select, tuple_
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ConflitoError, NaoEncontradoError
+from app.core.paginacao import codificar_posicao, decodificar_posicao
+from app.core.redis import ResilientRedis
 from app.core.security import gerar_hash_senha
-from app.models import Cliente, Seguidor
-from app.schemas import ClienteCriar
+from app.models import Cliente, Loja, Seguidor
+from app.schemas import ClienteCriar, LojaPublica, LojaSeguida, Pagina
+from app.services import cache_feed
 from app.services.lojas import obter_loja
 
 
@@ -36,7 +39,9 @@ async def criar_cliente(session: AsyncSession, dados: ClienteCriar) -> Cliente:
     return cliente
 
 
-async def seguir_loja(session: AsyncSession, cliente_id: int, loja_id: int) -> Seguidor:
+async def seguir_loja(
+    session: AsyncSession, redis: ResilientRedis, cliente_id: int, loja_id: int
+) -> Seguidor:
     await obter_cliente(session, cliente_id)
     await obter_loja(session, loja_id)
 
@@ -53,10 +58,14 @@ async def seguir_loja(session: AsyncSession, cliente_id: int, loja_id: int) -> S
             f"Cliente {cliente_id} já segue a loja {loja_id}.", codigo="ja_segue_loja"
         )
     await session.commit()
+    # Depois do commit: se o cache for repovoado entre o DEL e o commit, ficaria velho.
+    await cache_feed.invalidar(redis, cliente_id)
     return seguidor
 
 
-async def deixar_de_seguir(session: AsyncSession, cliente_id: int, loja_id: int) -> None:
+async def deixar_de_seguir(
+    session: AsyncSession, redis: ResilientRedis, cliente_id: int, loja_id: int
+) -> None:
     await obter_cliente(session, cliente_id)
     await obter_loja(session, loja_id)
 
@@ -70,3 +79,34 @@ async def deixar_de_seguir(session: AsyncSession, cliente_id: int, loja_id: int)
             f"Cliente {cliente_id} não segue a loja {loja_id}.", codigo="nao_segue_loja"
         )
     await session.commit()
+    await cache_feed.invalidar(redis, cliente_id)
+
+
+async def listar_seguindo(
+    session: AsyncSession, cliente_id: int, limite: int, cursor: str | None
+) -> Pagina[LojaSeguida]:
+    """Lojas que o cliente segue, das seguidas mais recentemente para as mais antigas."""
+    await obter_cliente(session, cliente_id)
+    stmt = (
+        select(Seguidor.criado_em, Loja)
+        .join(Loja, Loja.id == Seguidor.loja_id)
+        .where(Seguidor.cliente_id == cliente_id)
+        .order_by(Seguidor.criado_em.desc(), Seguidor.loja_id.desc())
+        .limit(limite + 1)
+    )
+    if cursor:
+        stmt = stmt.where(
+            tuple_(Seguidor.criado_em, Seguidor.loja_id) < tuple_(*decodificar_posicao(cursor))
+        )
+    linhas = (await session.execute(stmt)).all()
+
+    tem_mais = len(linhas) > limite
+    linhas = linhas[:limite]
+    ultimo = linhas[-1] if tem_mais else None
+    return Pagina[LojaSeguida](
+        itens=[
+            LojaSeguida(loja=LojaPublica.model_validate(loja), seguindo_desde=desde)
+            for desde, loja in linhas
+        ],
+        proximo_cursor=codificar_posicao(ultimo[0], ultimo[1].id) if ultimo else None,
+    )

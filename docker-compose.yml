@@ -17,6 +17,18 @@ services:
       timeout: 3s
       retries: 20
 
+  redis:
+    image: redis:7-alpine
+    # Cache e contadores de rate limit: dados descartáveis, sem persistência em disco.
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
   api:
     build:
       context: .
@@ -24,6 +36,8 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-feed}:${POSTGRES_PASSWORD:-feed}@db:5432/${POSTGRES_DB:-feed}
       # Vazio = chave aleatória a cada start (só dev). Em produção, defina no .env.
+      REDIS_URL: redis://redis:6379/0
+      FEED_CACHE_TTL_S: ${FEED_CACHE_TTL_S:-30}
       JWT_SECRET: ${JWT_SECRET:-}
       JWT_EXPIRA_MINUTOS: ${JWT_EXPIRA_MINUTOS:-30}
     ports:
@@ -43,6 +57,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
 
   # Roda a suíte de testes dentro do Docker: `docker compose run --rm tests`
   tests:
@@ -52,9 +68,12 @@ services:
       target: dev
     environment:
       TEST_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-feed}:${POSTGRES_PASSWORD:-feed}@db:5432/feed_test
+      TEST_REDIS_URL: redis://redis:6379/15
     command: ["pytest"]
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
 volumes:

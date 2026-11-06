@@ -23,9 +23,11 @@ from sqlalchemy.pool import NullPool
 from app.core import security
 from app.core.config import get_settings
 from app.core.db import get_session
+from app.core.redis import ResilientRedis, criar_cliente_redis, get_redis
 from app.main import app
 
 TEST_DATABASE_URL = get_settings().test_database_url
+TEST_REDIS_URL = get_settings().test_redis_url
 
 
 async def _criar_banco_se_nao_existir() -> None:
@@ -65,14 +67,27 @@ async def engine() -> AsyncIterator[AsyncEngine]:
     eng = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool)
     async with eng.begin() as conn:
         await conn.execute(
-            text("TRUNCATE novidades, seguidores, clientes, lojas RESTART IDENTITY CASCADE")
+            text(
+                "TRUNCATE novidades, seguidores, clientes, lojas, refresh_tokens "
+                "RESTART IDENTITY CASCADE"
+            )
         )
     yield eng
     await eng.dispose()
 
 
 @pytest.fixture
-async def client(engine: AsyncEngine) -> AsyncIterator[AsyncClient]:
+async def redis() -> AsyncIterator[ResilientRedis]:
+    # Um cliente por teste (cada teste tem seu event loop) num banco Redis só de teste,
+    # esvaziado antes de começar.
+    cliente = criar_cliente_redis(TEST_REDIS_URL)
+    await cliente.flushdb()
+    yield ResilientRedis(cliente)
+    await cliente.aclose()
+
+
+@pytest.fixture
+async def client(engine: AsyncEngine, redis: ResilientRedis) -> AsyncIterator[AsyncClient]:
     sessionmaker = async_sessionmaker(engine, expire_on_commit=False)
 
     async def _session_de_teste():
@@ -80,6 +95,7 @@ async def client(engine: AsyncEngine) -> AsyncIterator[AsyncClient]:
             yield session
 
     app.dependency_overrides[get_session] = _session_de_teste
+    app.dependency_overrides[get_redis] = lambda: redis
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
     app.dependency_overrides.clear()

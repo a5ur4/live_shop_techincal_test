@@ -1,39 +1,19 @@
-import base64
-import binascii
-import json
-from datetime import datetime
+from typing import Literal
 
 from sqlalchemy import select, true, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.errors import EntradaInvalidaError, ErroDetalhe
+from app.core.config import get_settings
+from app.core.paginacao import codificar_posicao, decodificar_posicao
+from app.core.redis import ResilientRedis
 from app.models import Loja, Novidade, Seguidor
 from app.schemas import FeedItem, FeedOut, LojaResumo
+from app.services import cache_feed
 from app.services.clientes import obter_cliente
 
-# Posição no feed: (criado_em, id) do último item entregue. Ver docs/adr/0006.
-Posicao = tuple[datetime, int]
+settings = get_settings()
 
-
-def codificar_cursor(criado_em: datetime, novidade_id: int) -> str:
-    dados = json.dumps({"c": criado_em.isoformat(), "id": novidade_id}, separators=(",", ":"))
-    return base64.urlsafe_b64encode(dados.encode()).decode().rstrip("=")
-
-
-def decodificar_cursor(cursor: str) -> Posicao:
-    try:
-        bruto = base64.urlsafe_b64decode(cursor + "=" * (-len(cursor) % 4))
-        dados = json.loads(bruto)
-        criado_em = datetime.fromisoformat(dados["c"])
-        novidade_id = dados["id"]
-        if criado_em.tzinfo is None or type(novidade_id) is not int:
-            raise ValueError
-    except (binascii.Error, UnicodeDecodeError, ValueError, KeyError, TypeError) as exc:
-        raise EntradaInvalidaError(
-            "Dados de entrada inválidos.",
-            detalhes=[ErroDetalhe(campo="cursor", mensagem="Cursor inválido.")],
-        ) from exc
-    return criado_em, novidade_id
+StatusCache = Literal["HIT", "MISS", "BYPASS"]
 
 
 async def montar_feed(
@@ -49,7 +29,7 @@ async def montar_feed(
     Com `cursor`, continua estritamente depois do último item da página anterior
     (paginação por keyset), usando o mesmo índice.
     """
-    depois_de = decodificar_cursor(cursor) if cursor else None
+    depois_de = decodificar_posicao(cursor) if cursor else None
     await obter_cliente(session, cliente_id)
 
     # Busca um item a mais para saber se existe próxima página.
@@ -90,5 +70,24 @@ async def montar_feed(
         )
         for row in linhas
     ]
-    proximo = codificar_cursor(linhas[-1].criado_em, linhas[-1].id) if tem_mais else None
+    proximo = codificar_posicao(linhas[-1].criado_em, linhas[-1].id) if tem_mais else None
     return FeedOut(itens=itens, proximo_cursor=proximo)
+
+
+async def ler_feed(
+    session: AsyncSession,
+    redis: ResilientRedis,
+    cliente_id: int,
+    limite: int,
+    cursor: str | None = None,
+) -> tuple[FeedOut, StatusCache]:
+    """Feed com cache da primeira página. Devolve também HIT/MISS/BYPASS (header X-Cache)."""
+    if cursor or settings.feed_cache_ttl_s <= 0:
+        return await montar_feed(session, cliente_id, limite, cursor), "BYPASS"
+
+    if (em_cache := await cache_feed.obter(redis, cliente_id, limite)) is not None:
+        return em_cache, "HIT"
+
+    feed = await montar_feed(session, cliente_id, limite)
+    await cache_feed.salvar(redis, cliente_id, limite, feed)
+    return feed, "MISS"

@@ -9,13 +9,27 @@ from app.main import app
 ROTAS_ESPERADAS = {
     ("post", "/auth/clientes/token"),
     ("post", "/auth/lojas/token"),
+    ("post", "/auth/refresh"),
+    ("post", "/auth/logout"),
+    ("put", "/me/senha"),
     ("post", "/lojas"),
+    ("get", "/lojas"),
+    ("get", "/lojas/{loja_id}"),
+    ("get", "/lojas/{loja_id}/novidades"),
+    ("get", "/clientes/{cliente_id}/seguindo"),
     ("post", "/lojas/{loja_id}/novidades"),
     ("post", "/clientes"),
     ("post", "/clientes/{cliente_id}/seguindo/{loja_id}"),
     ("delete", "/clientes/{cliente_id}/seguindo/{loja_id}"),
     ("get", "/clientes/{cliente_id}/feed"),
     ("get", "/health"),
+    ("get", "/me"),
+    ("get", "/me/feed"),
+    ("get", "/me/seguindo"),
+    ("post", "/me/seguindo/{loja_id}"),
+    ("delete", "/me/seguindo/{loja_id}"),
+    ("post", "/me/novidades"),
+    ("get", "/me/novidades"),
 }
 
 
@@ -39,10 +53,19 @@ def test_todas_as_rotas_documentadas_com_erro_no_formato_padrao():
 
 
 ROTAS_PROTEGIDAS = {
+    ("get", "/me"): ["Cliente", "Lojista"],  # qualquer um dos dois
+    ("put", "/me/senha"): ["Cliente", "Lojista"],
+    ("get", "/me/feed"): "Cliente",
+    ("get", "/me/seguindo"): "Cliente",
+    ("post", "/me/seguindo/{loja_id}"): "Cliente",
+    ("delete", "/me/seguindo/{loja_id}"): "Cliente",
+    ("post", "/me/novidades"): "Lojista",
+    ("get", "/me/novidades"): "Lojista",
     ("post", "/lojas/{loja_id}/novidades"): "Lojista",
     ("post", "/clientes/{cliente_id}/seguindo/{loja_id}"): "Cliente",
     ("delete", "/clientes/{cliente_id}/seguindo/{loja_id}"): "Cliente",
     ("get", "/clientes/{cliente_id}/feed"): "Cliente",
+    ("get", "/clientes/{cliente_id}/seguindo"): "Cliente",
 }
 
 
@@ -54,8 +77,11 @@ def test_rotas_protegidas_declaram_esquema_oauth2():
 
     for (metodo, path), esquema in ROTAS_PROTEGIDAS.items():
         op = spec["paths"][path][metodo]
-        assert op.get("security") == [{esquema: []}], (metodo, path)
-        assert {"401", "403"} <= set(op["responses"]), (metodo, path)
+        esquemas_aceitos = esquema if isinstance(esquema, list) else [esquema]
+        assert op.get("security") == [{e: []} for e in esquemas_aceitos], (metodo, path)
+        assert "401" in op["responses"], (metodo, path)
+        if len(esquemas_aceitos) == 1:
+            assert "403" in op["responses"], (metodo, path)
 
     publicas = ROTAS_ESPERADAS - set(ROTAS_PROTEGIDAS)
     for metodo, path in publicas:

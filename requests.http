@@ -79,6 +79,54 @@ Authorization: Bearer {{tokenCliente}}
 GET {{base}}/clientes/{{clienteId}}/feed?limite=1&cursor={{feed.response.body.proximo_cursor}}
 Authorization: Bearer {{tokenCliente}}
 
+### --- Minha conta (/me): o id vem do token ---
+
+### Perfil de quem está logado (cliente ou lojista)
+GET {{base}}/me
+Authorization: Bearer {{tokenCliente}}
+
+### Meu feed
+GET {{base}}/me/feed?limite=5
+Authorization: Bearer {{tokenCliente}}
+
+### Lojas que eu sigo
+GET {{base}}/me/seguindo
+Authorization: Bearer {{tokenCliente}}
+
+### Sigo / deixo de seguir uma loja
+POST {{base}}/me/seguindo/1
+Authorization: Bearer {{tokenCliente}}
+
+###
+DELETE {{base}}/me/seguindo/1
+Authorization: Bearer {{tokenCliente}}
+
+### Lojista publica na própria loja
+POST {{base}}/me/novidades
+Authorization: Bearer {{tokenLoja}}
+Content-Type: application/json
+
+{"texto": "Publicado via /me"}
+
+### Novidades da minha loja
+GET {{base}}/me/novidades
+Authorization: Bearer {{tokenLoja}}
+
+### --- Leitura ---
+
+### Lista lojas (público, paginado; q filtra por nome)
+GET {{base}}/lojas?limite=10&q=loja
+
+### Detalhes públicos de uma loja (com total de seguidores)
+GET {{base}}/lojas/{{lojaId}}
+
+### Novidades de uma loja (público, paginado)
+GET {{base}}/lojas/{{lojaId}}/novidades?limite=10
+
+### Lojas que o cliente segue
+GET {{base}}/clientes/{{clienteId}}/seguindo
+Authorization: Bearer {{tokenCliente}}
+
 ### --- Erros (todos no mesmo formato) ---
 
 ### 401: sem token

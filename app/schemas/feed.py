@@ -1,9 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
-
-from app.schemas.base import Saida
+from app.schemas.base import Pagina, Saida
 
 
 class LojaResumo(Saida):
@@ -19,8 +17,5 @@ class FeedItem(Saida):
     criado_em: datetime
 
 
-class FeedOut(BaseModel):
-    itens: list[FeedItem]
-    proximo_cursor: str | None = Field(
-        description="Envie em `cursor` para buscar a próxima página; `null` quando não há mais."
-    )
+class FeedOut(Pagina[FeedItem]):
+    pass
