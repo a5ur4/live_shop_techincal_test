@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help up down logs db dev migrate migration seed test test-docker lint format check
+.PHONY: help up down logs db dev migrate migration seed test test-docker lint format check benchmark
 
 help: ## Lista os comandos disponíveis
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -43,3 +43,6 @@ format: ## Corrige lint e formatação
 	uv run ruff format .
 
 check: lint test ## Lint + testes (o mesmo que o CI roda)
+
+benchmark: db ## Mede o feed com uma loja de 100 mil seguidores (banco feed_bench separado)
+	uv run python -m scripts.benchmark_feed
