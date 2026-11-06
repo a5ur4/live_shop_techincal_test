@@ -1,0 +1,4 @@
+# Scripts executados dentro do container Linux precisam de LF: com CRLF (padrão do Git no
+# Windows) o shebang vira "/bin/sh\r" e o container falha com "no such file or directory".
+*.sh text eol=lf
+Dockerfile text eol=lf

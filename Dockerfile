@@ -27,7 +27,9 @@ COPY alembic.ini ./
 COPY migrations ./migrations
 COPY app ./app
 COPY docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh \
+# Remove CR caso o checkout tenha vindo com CRLF (Git no Windows sem .gitattributes).
+RUN sed -i 's/\r$//' /entrypoint.sh \
+    && chmod +x /entrypoint.sh \
     && useradd --system --uid 10001 --no-create-home app
 
 # Arquivos ficam do root (somente leitura para a app); o processo roda sem privilégios.
