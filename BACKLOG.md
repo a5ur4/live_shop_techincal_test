@@ -78,7 +78,7 @@ Marque `[x]` ao concluir e mantenha a ordem: **obrigatório antes de diferencial
 - [x] Editar perfil (`PATCH /me`, `/lojas/{id}`, `/clientes/{id}`)
 - [x] Excluir conta com confirmação por senha (`DELETE /me`, `/lojas/{id}`, `/clientes/{id}`)
 - [x] Front de teste em `/app` (HTML + JS, sem build) — ADR 0009
-- [ ] Pull Request `feat/edicao-exclusao-front` → `main`
+- [x] Pull Request `feat/edicao-exclusao-front` → `main` ([#3](https://github.com/a5ur4/live_shop_techincal_test/pull/3))
 
 ## Ideias futuras (fora do escopo)
 
