@@ -1,10 +1,19 @@
+from typing import Literal
+
 from sqlalchemy import select, true, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.paginacao import codificar_posicao, decodificar_posicao
+from app.core.redis import ResilientRedis
 from app.models import Loja, Novidade, Seguidor
 from app.schemas import FeedItem, FeedOut, LojaResumo
+from app.services import cache_feed
 from app.services.clientes import obter_cliente
+
+settings = get_settings()
+
+StatusCache = Literal["HIT", "MISS", "BYPASS"]
 
 
 async def montar_feed(
@@ -63,3 +72,22 @@ async def montar_feed(
     ]
     proximo = codificar_posicao(linhas[-1].criado_em, linhas[-1].id) if tem_mais else None
     return FeedOut(itens=itens, proximo_cursor=proximo)
+
+
+async def ler_feed(
+    session: AsyncSession,
+    redis: ResilientRedis,
+    cliente_id: int,
+    limite: int,
+    cursor: str | None = None,
+) -> tuple[FeedOut, StatusCache]:
+    """Feed com cache da primeira página. Devolve também HIT/MISS/BYPASS (header X-Cache)."""
+    if cursor or settings.feed_cache_ttl_s <= 0:
+        return await montar_feed(session, cliente_id, limite, cursor), "BYPASS"
+
+    if (em_cache := await cache_feed.obter(redis, cliente_id, limite)) is not None:
+        return em_cache, "HIT"
+
+    feed = await montar_feed(session, cliente_id, limite)
+    await cache_feed.salvar(redis, cliente_id, limite, feed)
+    return feed, "MISS"

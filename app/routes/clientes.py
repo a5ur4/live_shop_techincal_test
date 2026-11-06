@@ -1,7 +1,15 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Response, status
 
 from app.core.errors import respostas_erro
-from app.routes.deps import LIMITE_PADRAO, ClienteAutenticado, Cursor, Limite, LojaId, SessionDep
+from app.routes.deps import (
+    LIMITE_PADRAO,
+    ClienteAutenticado,
+    Cursor,
+    Limite,
+    LojaId,
+    RedisDep,
+    SessionDep,
+)
 from app.schemas import ClienteCriar, ClienteOut, FeedOut, LojaSeguida, Pagina, SeguindoOut
 from app.services import clientes as service
 from app.services import feed as feed_service
@@ -33,8 +41,10 @@ async def criar_cliente(dados: ClienteCriar, session: SessionDep):
     ),
     summary="Cliente passa a seguir uma loja",
 )
-async def seguir_loja(cliente_id: ClienteAutenticado, loja_id: LojaId, session: SessionDep):
-    return await service.seguir_loja(session, cliente_id, loja_id)
+async def seguir_loja(
+    cliente_id: ClienteAutenticado, loja_id: LojaId, session: SessionDep, redis: RedisDep
+):
+    return await service.seguir_loja(session, redis, cliente_id, loja_id)
 
 
 @router.delete(
@@ -50,9 +60,9 @@ async def seguir_loja(cliente_id: ClienteAutenticado, loja_id: LojaId, session: 
     summary="Cliente deixa de seguir uma loja",
 )
 async def deixar_de_seguir(
-    cliente_id: ClienteAutenticado, loja_id: LojaId, session: SessionDep
+    cliente_id: ClienteAutenticado, loja_id: LojaId, session: SessionDep, redis: RedisDep
 ) -> None:
-    await service.deixar_de_seguir(session, cliente_id, loja_id)
+    await service.deixar_de_seguir(session, redis, cliente_id, loja_id)
 
 
 @router.get(
@@ -62,16 +72,23 @@ async def deixar_de_seguir(
     summary="Feed com as novidades das lojas seguidas",
     description=(
         "Novidades das lojas que o cliente segue, da mais recente para a mais antiga. "
-        "Para a próxima página, repita a chamada com `cursor=<proximo_cursor>`."
+        "Para a próxima página, repita a chamada com `cursor=<proximo_cursor>`.\n\n"
+        "Header `X-Cache`: `HIT` (primeira página vinda do cache), `MISS` (calculada e "
+        "guardada) ou `BYPASS` (páginas com cursor). Novidades novas aparecem em até 30s; "
+        "seguir ou deixar de seguir atualiza na hora."
     ),
 )
 async def feed(
     cliente_id: ClienteAutenticado,
     session: SessionDep,
+    redis: RedisDep,
+    response: Response,
     limite: Limite = LIMITE_PADRAO,
     cursor: Cursor = None,
 ):
-    return await feed_service.montar_feed(session, cliente_id, limite, cursor)
+    feed, status_cache = await feed_service.ler_feed(session, redis, cliente_id, limite, cursor)
+    response.headers["X-Cache"] = status_cache
+    return feed
 
 
 @router.get(

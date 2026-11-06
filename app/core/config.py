@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     redis_url: str | None = "redis://localhost:6379/0"
     test_redis_url: str = "redis://localhost:6379/15"
     redis_timeout_s: float = 0.5
+    # Quanto tempo a primeira página do feed fica em cache (0 desliga o cache do feed).
+    feed_cache_ttl_s: int = 30
 
     # Autenticação (OAuth2 password flow + JWT). Sem JWT_SECRET definido, uma chave
     # aleatória é gerada a cada start: serve para desenvolvimento, mas invalida os

@@ -4,7 +4,7 @@ Equivalem às rotas com `{id}` (que continuam existindo, como pede o enunciado),
 cliente do app não precisa conhecer nem enviar o próprio id.
 """
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Response, status
 
 from app.core.errors import respostas_erro
 from app.routes.deps import (
@@ -15,6 +15,7 @@ from app.routes.deps import (
     Limite,
     LojaAtual,
     LojaId,
+    RedisDep,
     SessionDep,
 )
 from app.schemas import (
@@ -79,15 +80,19 @@ async def trocar_senha(conta: ContaAtual, dados: TrocaSenhaIn, session: SessionD
     response_model=FeedOut,
     responses=respostas_erro("nao_autenticado", "acesso_negado", "entrada_invalida"),
     summary="Meu feed",
-    description=_SO_CLIENTE,
+    description=_SO_CLIENTE + " Mesmo cache e header `X-Cache` de `GET /clientes/{id}/feed`.",
 )
 async def meu_feed(
     cliente_id: ClienteAtual,
     session: SessionDep,
+    redis: RedisDep,
+    response: Response,
     limite: Limite = LIMITE_PADRAO,
     cursor: Cursor = None,
 ):
-    return await feed_service.montar_feed(session, cliente_id, limite, cursor)
+    feed, status_cache = await feed_service.ler_feed(session, redis, cliente_id, limite, cursor)
+    response.headers["X-Cache"] = status_cache
+    return feed
 
 
 @router.get(
@@ -120,8 +125,8 @@ async def minhas_lojas_seguidas(
     summary="Passo a seguir uma loja",
     description=_SO_CLIENTE,
 )
-async def seguir(cliente_id: ClienteAtual, loja_id: LojaId, session: SessionDep):
-    return await clientes_service.seguir_loja(session, cliente_id, loja_id)
+async def seguir(cliente_id: ClienteAtual, loja_id: LojaId, session: SessionDep, redis: RedisDep):
+    return await clientes_service.seguir_loja(session, redis, cliente_id, loja_id)
 
 
 @router.delete(
@@ -137,8 +142,10 @@ async def seguir(cliente_id: ClienteAtual, loja_id: LojaId, session: SessionDep)
     summary="Deixo de seguir uma loja",
     description=_SO_CLIENTE,
 )
-async def deixar_de_seguir(cliente_id: ClienteAtual, loja_id: LojaId, session: SessionDep) -> None:
-    await clientes_service.deixar_de_seguir(session, cliente_id, loja_id)
+async def deixar_de_seguir(
+    cliente_id: ClienteAtual, loja_id: LojaId, session: SessionDep, redis: RedisDep
+) -> None:
+    await clientes_service.deixar_de_seguir(session, redis, cliente_id, loja_id)
 
 
 @router.post(

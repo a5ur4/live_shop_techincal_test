@@ -37,6 +37,7 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-feed}:${POSTGRES_PASSWORD:-feed}@db:5432/${POSTGRES_DB:-feed}
       # Vazio = chave aleatória a cada start (só dev). Em produção, defina no .env.
       REDIS_URL: redis://redis:6379/0
+      FEED_CACHE_TTL_S: ${FEED_CACHE_TTL_S:-30}
       JWT_SECRET: ${JWT_SECRET:-}
       JWT_EXPIRA_MINUTOS: ${JWT_EXPIRA_MINUTOS:-30}
     ports:
