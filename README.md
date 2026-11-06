@@ -17,15 +17,15 @@ OAuth2/JWT · Docker · uv**. Enunciado completo em [`docs/desafio.md`](docs/des
 ```bash
 git clone https://github.com/a5ur4/live_shop_techincal_test.git
 cd live_shop_techincal_test
-docker compose up -d --build --wait            # Postgres + Redis + API; migrations rodam sozinhas
-docker compose exec api python -m app.seed     # (opcional) dados de exemplo
+docker compose up -d --build --wait            # Postgres + Redis + API; migrations e seed rodam sozinhos
 ```
 
 - API: <http://localhost:8000> · Saúde: <http://localhost:8000/health>
 - Swagger (OpenAPI): <http://localhost:8000/docs> — use o botão **Authorize** para logar.
 
-O seed cria 5 lojas, 4 clientes e 12 novidades. **Senha de todas as contas: `senha123`**
-(só desenvolvimento). Ex.: cliente `elisa@example.com` (segue todas as lojas), lojista
+O seed roda no start da API quando o banco está vazio (desligue com `SEED_DB=false`; para
+recriar os dados, `docker compose exec api python -m app.seed --reset`). Ele cria 5 lojas,
+4 clientes e 12 novidades. **Senha de todas as contas: `senha123`** (só desenvolvimento). Ex.: cliente `elisa@example.com` (segue todas as lojas), lojista
 `modadaana@lojas.example.com`.
 
 Nenhum `.env` é necessário: os padrões já funcionam. Para mudar portas, credenciais ou a
