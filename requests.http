@@ -19,6 +19,12 @@ Content-Type: application/json
 ### Cliente 1 passa a seguir a loja 1
 POST {{base}}/clientes/1/seguindo/1
 
+### Cliente 1 deixa de seguir a loja 1 (204)
+DELETE {{base}}/clientes/1/seguindo/1
+
+### Cliente 1 volta a seguir a loja 1
+POST {{base}}/clientes/1/seguindo/1
+
 ### Loja 1 publica novidade com preço
 POST {{base}}/lojas/1/novidades
 Content-Type: application/json

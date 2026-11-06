@@ -36,6 +36,16 @@ async def seguir_loja(cliente_id: int, loja_id: int, session: SessionDep):
     return await service.seguir_loja(session, cliente_id, loja_id)
 
 
+@router.delete(
+    "/{cliente_id}/seguindo/{loja_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses=respostas_erro(404, 422),
+    summary="Cliente deixa de seguir uma loja",
+)
+async def deixar_de_seguir(cliente_id: int, loja_id: int, session: SessionDep) -> None:
+    await service.deixar_de_seguir(session, cliente_id, loja_id)
+
+
 @router.get(
     "/{cliente_id}/feed",
     response_model=FeedOut,

@@ -1,3 +1,4 @@
+from sqlalchemy import delete
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -52,3 +53,19 @@ async def seguir_loja(session: AsyncSession, cliente_id: int, loja_id: int) -> S
         )
     await session.commit()
     return seguidor
+
+
+async def deixar_de_seguir(session: AsyncSession, cliente_id: int, loja_id: int) -> None:
+    await obter_cliente(session, cliente_id)
+    await obter_loja(session, loja_id)
+
+    removido = await session.scalar(
+        delete(Seguidor)
+        .where(Seguidor.cliente_id == cliente_id, Seguidor.loja_id == loja_id)
+        .returning(Seguidor.loja_id)
+    )
+    if removido is None:
+        raise NaoEncontradoError(
+            f"Cliente {cliente_id} não segue a loja {loja_id}.", codigo="nao_segue_loja"
+        )
+    await session.commit()
