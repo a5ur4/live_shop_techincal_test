@@ -22,7 +22,7 @@ make test-docker   # testes só com Docker
 make lint          # ruff check + format --check
 make format        # corrige lint/format
 make check         # lint + testes — rode antes de todo commit
-make migration m="descricao"   # gera migration a partir de app/models.py
+make migration m="descricao"   # gera migration a partir de app/models/
 ```
 
 Teste específico: `uv run pytest tests/test_feed.py -k limite -q`.
@@ -30,14 +30,14 @@ Teste específico: `uv run pytest tests/test_feed.py -k limite -q`.
 ## Arquitetura
 
 ```
-app/api/        HTTP fino: rota, status code, parâmetros, `responses=respostas_erro(...)`
+app/routes/     HTTP fino: rota, status code, parâmetros, `responses=respostas_erro(...)`
 app/services/   regra de negócio + queries; levanta AppError; faz commit
-app/models.py   tabelas SQLAlchemy (constraints e índices aqui)
-app/schemas.py  Pydantic: entrada (`_Entrada`, extra="forbid") e saída (`_Saida`)
+app/models/     tabelas SQLAlchemy, um arquivo por entidade (constraints e índices aqui)
+app/schemas/    Pydantic por recurso: entrada (`Entrada`, extra="forbid") e saída (`Saida`)
 app/core/       config (env), db (engine/sessão), errors (formato único de erro)
 ```
 
-Dependências só vão para baixo: `api → services → models`. Rotas **não** acessam o banco
+Dependências só vão para baixo: `routes → services → models`. Rotas **não** acessam o banco
 direto; services **não** importam FastAPI (exceto via `app.core.errors`).
 
 ## Convenções
@@ -52,18 +52,20 @@ direto; services **não** importam FastAPI (exceto via `app.core.errors`).
 - **Dinheiro**: `Decimal`/`NUMERIC(12,2)`, nunca `float`. Sai como string no JSON.
 - **Ordem do feed**: sempre `criado_em DESC, id DESC`. O índice
   `ix_novidades_loja_feed` depende disso; se mudar a ordem, mude o índice.
-- **Schema do banco**: só muda via migration Alembic. Altere `app/models.py`, rode
+- **Schema do banco**: só muda via migration Alembic. Altere `app/models/`, rode
   `make migration m="..."`, **revise o arquivo gerado** e rode `make format`.
 - **Estilo**: ruff (linha de 100, regras em `pyproject.toml`). Type hints em funções públicas.
 - **Comentários**: só para explicar o *porquê*, não o *quê*.
 
 ## Como adicionar um endpoint (checklist)
 
-1. Schema de entrada/saída em `app/schemas.py` (herde `_Entrada`/`_Saida`).
+1. Schema de entrada/saída em `app/schemas/<recurso>.py` (herde `Entrada`/`Saida`) e
+   exporte em `app/schemas/__init__.py`.
 2. Função no service adequado em `app/services/` levantando `AppError` nos casos de erro.
-3. Rota em `app/api/` com `status_code`, `response_model`, `responses=respostas_erro(...)`
+3. Rota em `app/routes/` com `status_code`, `response_model`, `responses=respostas_erro(...)`
    e `summary`.
-4. Mudou tabela? Migration (ver acima).
+4. Mudou tabela? Modelo novo em `app/models/<entidade>.py`, importado em
+   `app/models/__init__.py` (senão o Alembic não enxerga), e migration (ver acima).
 5. Testes em `tests/test_<area>.py`: caminho feliz + cada erro, usando `tests/helpers.py`
    (`criar_loja`, `criar_cliente`, `seguir`, `publicar`, `assert_erro`).
 6. Exemplo em `requests.http`, linha na tabela de endpoints do README.

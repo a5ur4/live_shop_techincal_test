@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
-from app.api import clientes, health, lojas
 from app.core.errors import register_error_handlers
+from app.routes import clientes, health, lojas
 
 DESCRICAO = """
 Clientes seguem lojas e acompanham, num feed, as novidades que elas publicam.

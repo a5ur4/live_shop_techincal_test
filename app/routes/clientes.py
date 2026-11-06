@@ -2,8 +2,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, status
 
-from app.api.deps import ClienteId, LojaId, SessionDep
 from app.core.errors import respostas_erro
+from app.routes.deps import ClienteId, LojaId, SessionDep
 from app.schemas import ClienteCriar, ClienteOut, FeedOut, SeguindoOut
 from app.services import clientes as service
 from app.services import feed as feed_service

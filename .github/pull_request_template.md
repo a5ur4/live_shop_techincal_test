@@ -19,5 +19,5 @@
 - [ ] `make check` passa (lint + testes)
 - [ ] Testes cobrem sucesso e erros
 - [ ] README / `requests.http` / ADR atualizados se o comportamento mudou
-- [ ] Migration revisada (se mexeu em `app/models.py`)
+- [ ] Migration revisada (se mexeu em `app/models/`)
 - [ ] Itens marcados no `BACKLOG.md`

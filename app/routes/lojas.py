@@ -1,7 +1,7 @@
 from fastapi import APIRouter, status
 
-from app.api.deps import LojaId, SessionDep
 from app.core.errors import respostas_erro
+from app.routes.deps import LojaId, SessionDep
 from app.schemas import LojaCriar, LojaOut, NovidadeCriar, NovidadeOut
 from app.services import lojas as service
 

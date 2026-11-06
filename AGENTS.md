@@ -7,5 +7,5 @@ Resumo mínimo:
 
 - Requisitos: `docs/desafio.md`. Decisões: `docs/adr/`. Pendências: `BACKLOG.md`.
 - Rodar: `make up` · Testar: `make check` (precisa passar antes de todo commit).
-- Camadas `app/api → app/services → app/models`; erros só via `app/core/errors.py`.
+- Camadas `app/routes → app/services → app/models`; erros só via `app/core/errors.py`.
 - Tudo em português (domínio, JSON, mensagens, commits em Conventional Commits).

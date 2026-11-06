@@ -5,8 +5,8 @@ from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.api.deps import SessionDep
 from app.core.errors import AppError, respostas_erro
+from app.routes.deps import SessionDep
 
 logger = logging.getLogger(__name__)
 

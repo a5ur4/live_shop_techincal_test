@@ -122,10 +122,10 @@ Erros — sempre no mesmo formato:
 ```
 app/
   main.py          # cria a app FastAPI, registra rotas e handlers de erro
-  api/             # camada HTTP: rotas finas, status codes, parâmetros (sem regra de negócio)
+  routes/          # camada HTTP: rotas finas, status codes, parâmetros (sem regra de negócio)
   services/        # regras de negócio e queries (lojas, clientes/seguir, feed)
-  models.py        # tabelas SQLAlchemy, constraints e índices
-  schemas.py       # contratos Pydantic de entrada/saída e validação de formato
+  models/          # tabelas SQLAlchemy, um arquivo por entidade, com constraints e índices
+  schemas/         # contratos Pydantic de entrada/saída por recurso e validação de formato
   core/            # infraestrutura: config (env), sessão do banco, formato único de erro
   seed.py          # dados de exemplo: python -m app.seed [--reset]
 migrations/        # Alembic (async); versions/ tem o histórico do schema
@@ -154,7 +154,7 @@ Resumo — o raciocínio completo, com alternativas, está em [`docs/adr/`](docs
   (`preco NUMERIC(12,2)`, CHECKs de texto e preço). Ids `BIGINT IDENTITY`, datas `timestamptz`.
 - **Unicidade sem corrida** — e-mail e seguir usam `INSERT ... ON CONFLICT DO NOTHING`: duas
   requisições simultâneas não passam pela checagem e quebram com 500; uma recebe 409.
-- **Camadas `api → services → models`** ([ADR 0001](docs/adr/0001-stack-e-organizacao.md)):
+- **Camadas `routes → services → models`** ([ADR 0001](docs/adr/0001-stack-e-organizacao.md)):
   rotas só tratam HTTP; regras ficam nos services, que levantam erros de domínio.
 - **Formato único de erro** ([ADR 0003](docs/adr/0003-formato-unico-de-erro.md)):
   `{"erro": {"codigo", "mensagem", "detalhes"}}` com `codigo` estável para o cliente tratar.
