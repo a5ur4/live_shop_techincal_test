@@ -51,7 +51,10 @@ async def deixar_de_seguir(cliente_id: int, loja_id: int, session: SessionDep) -
     response_model=FeedOut,
     responses=respostas_erro(404, 422),
     summary="Feed com as novidades das lojas seguidas",
-    description="Da mais recente para a mais antiga.",
+    description=(
+        "Novidades das lojas que o cliente segue, da mais recente para a mais antiga. "
+        "Para a próxima página, repita a chamada com `cursor=<proximo_cursor>`."
+    ),
 )
 async def feed(
     cliente_id: int,
@@ -59,5 +62,9 @@ async def feed(
     limite: Annotated[
         int, Query(ge=1, le=LIMITE_MAXIMO, description="Quantidade de itens (1 a 50).")
     ] = LIMITE_PADRAO,
+    cursor: Annotated[
+        str | None,
+        Query(max_length=200, description="`proximo_cursor` da página anterior."),
+    ] = None,
 ):
-    return await feed_service.montar_feed(session, cliente_id, limite)
+    return await feed_service.montar_feed(session, cliente_id, limite, cursor)

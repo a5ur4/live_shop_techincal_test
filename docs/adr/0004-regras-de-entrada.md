@@ -23,7 +23,7 @@ O enunciado define as regras principais, mas deixa alguns detalhes em aberto. A 
 | Novidades antigas ao seguir | Aparecem no feed | Feed mostra tudo da loja, não só o que veio depois do seguir |
 | Unicidade (email, seguir) | Garantida no banco com `INSERT ... ON CONFLICT DO NOTHING` | Sem corrida entre "checar" e "inserir" com requisições simultâneas |
 | Validação no banco | `CHECK` de `texto` e `preco` também no Postgres | Última linha de defesa se alguém inserir por fora da API |
-| Formato do feed | Objeto `{"itens": [...]}` em vez de lista pura | Permite acrescentar metadados (ex.: cursor de paginação) sem quebrar clientes |
+| Formato do feed | Objeto `{"itens": [...], "proximo_cursor": ...}` em vez de lista pura | Permite paginação (ADR 0006) e novos metadados sem quebrar clientes |
 | Item do feed | Inclui `loja: {id, nome}` | O app precisa mostrar de quem é a novidade sem outra chamada |
 
 ## Consequências

@@ -11,6 +11,7 @@ Quando uma decisão mudar, não edite o ADR antigo — crie um novo e marque o a
 | [0003](0003-formato-unico-de-erro.md) | Formato único de erro | Aceito |
 | [0004](0004-regras-de-entrada.md) | Regras de validação e pontos ambíguos do enunciado | Aceito |
 | [0005](0005-testes-com-postgres-real.md) | Testes de integração contra Postgres real | Aceito |
+| [0006](0006-paginacao-por-cursor.md) | Paginação do feed por cursor (keyset) | Aceito |
 
 Modelo para novos ADRs:
 

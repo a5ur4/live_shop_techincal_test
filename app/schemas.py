@@ -97,3 +97,6 @@ class FeedItem(_Saida):
 
 class FeedOut(BaseModel):
     itens: list[FeedItem]
+    proximo_cursor: str | None = Field(
+        description="Envie em `cursor` para buscar a próxima página; `null` quando não há mais."
+    )

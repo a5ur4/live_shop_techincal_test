@@ -43,6 +43,9 @@ GET {{base}}/clientes/1/feed
 ### Feed com limite
 GET {{base}}/clientes/3/feed?limite=5
 
+### Próxima página: copie o `proximo_cursor` da resposta anterior
+GET {{base}}/clientes/3/feed?limite=5&cursor=COLE_O_PROXIMO_CURSOR_AQUI
+
 ### --- Erros (todos no mesmo formato) ---
 
 ### 422: texto vazio e preço negativo
