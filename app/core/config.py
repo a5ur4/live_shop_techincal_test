@@ -9,17 +9,20 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    database_url: str = "postgresql+asyncpg://feed:feed@localhost:5432/feed"
+    # 127.0.0.1, não "localhost": o docker-compose publica as portas só em IPv4 e, no Windows,
+    # "localhost" resolve primeiro para ::1, cuja recusa leva ~2s antes do fallback para IPv4
+    # (estoura o timeout do Redis e atrasa cada conexão nova ao Postgres).
+    database_url: str = "postgresql+asyncpg://feed:feed@127.0.0.1:5432/feed"
     # Usado só pela suíte de testes; o banco é criado automaticamente se não existir.
-    test_database_url: str = "postgresql+asyncpg://feed:feed@localhost:5432/feed_test"
+    test_database_url: str = "postgresql+asyncpg://feed:feed@127.0.0.1:5432/feed_test"
     sql_echo: bool = False
     # Teto de tempo por query no Postgres: protege contra requisições caras (ex.: feed de
     # quem segue milhares de lojas) segurando conexões indefinidamente.
     db_statement_timeout_ms: int = 5000
 
     # Redis (cache do feed e rate limit). Vazio desliga os dois; a API segue funcionando.
-    redis_url: str | None = "redis://localhost:6379/0"
-    test_redis_url: str = "redis://localhost:6379/15"
+    redis_url: str | None = "redis://127.0.0.1:6379/0"
+    test_redis_url: str = "redis://127.0.0.1:6379/15"
     redis_timeout_s: float = 0.5
     # Quanto tempo a primeira página do feed fica em cache (0 desliga o cache do feed).
     feed_cache_ttl_s: int = 30
