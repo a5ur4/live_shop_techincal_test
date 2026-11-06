@@ -1,0 +1,61 @@
+from typing import Annotated
+
+from fastapi import Depends, Path
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.db import get_session
+from app.core.errors import AcessoNegadoError, NaoAutenticadoError
+from app.core.security import Identidade, TipoConta, ler_token
+
+SessionDep = Annotated[AsyncSession, Depends(get_session)]
+
+ClienteId = Annotated[int, Path(description="Id do cliente.", examples=[1])]
+LojaId = Annotated[int, Path(description="Id da loja.", examples=[1])]
+
+# auto_error=False: sem token, quem responde é NaoAutenticadoError, no formato padrão.
+_oauth2_cliente = OAuth2PasswordBearer(
+    tokenUrl="/auth/clientes/token",
+    scheme_name="Cliente",
+    description="Login de cliente: e-mail e senha do cadastro em POST /clientes.",
+    auto_error=False,
+)
+_oauth2_loja = OAuth2PasswordBearer(
+    tokenUrl="/auth/lojas/token",
+    scheme_name="Lojista",
+    description="Login de lojista: e-mail e senha do cadastro em POST /lojas.",
+    auto_error=False,
+)
+
+
+def _identidade(token: str | None, tipo: TipoConta) -> Identidade:
+    if not token:
+        raise NaoAutenticadoError("Token de acesso ausente.")
+    identidade = ler_token(token)
+    if identidade is None:
+        raise NaoAutenticadoError("Token inválido ou expirado.")
+    if identidade.tipo != tipo:
+        raise AcessoNegadoError(f"Este endpoint exige login de {tipo}.")
+    return identidade
+
+
+async def _exigir_cliente_dono(
+    cliente_id: ClienteId, token: Annotated[str | None, Depends(_oauth2_cliente)]
+) -> int:
+    """Os ids continuam na rota (enunciado); o token precisa ser do mesmo cliente."""
+    if _identidade(token, "cliente").id != cliente_id:
+        raise AcessoNegadoError("Este token não dá acesso a este cliente.")
+    return cliente_id
+
+
+async def _exigir_loja_dona(
+    loja_id: LojaId, token: Annotated[str | None, Depends(_oauth2_loja)]
+) -> int:
+    if _identidade(token, "loja").id != loja_id:
+        raise AcessoNegadoError("Este token não dá acesso a esta loja.")
+    return loja_id
+
+
+# Use no lugar de ClienteId/LojaId nas rotas protegidas: valida token e dono numa linha.
+ClienteAutenticado = Annotated[int, Depends(_exigir_cliente_dono)]
+LojaAutenticada = Annotated[int, Depends(_exigir_loja_dona)]

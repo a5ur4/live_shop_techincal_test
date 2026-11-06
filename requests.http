@@ -1,0 +1,119 @@
+# Exemplos de chamada de todos os endpoints.
+# Funciona com a extensão REST Client (VS Code) e com o cliente HTTP do JetBrains.
+# Rode em ordem: os logins guardam o token em variáveis usadas nas rotas protegidas.
+# Com `make up` + `make seed`, use as contas do seed (senha: senha123).
+
+@base = http://localhost:8000
+
+### Saúde da API e do banco
+GET {{base}}/health
+
+### Cadastra uma loja (público)
+POST {{base}}/lojas
+Content-Type: application/json
+
+{"nome": "Loja da Ana", "email": "ana@lojadaana.com", "senha": "senha-forte-123"}
+
+### Cadastra um cliente (público)
+POST {{base}}/clientes
+Content-Type: application/json
+
+{"nome": "João Silva", "email": "joao@example.com", "senha": "senha-forte-123"}
+
+### Login do lojista (OAuth2 password flow: form, username = e-mail)
+# @name loginLoja
+POST {{base}}/auth/lojas/token
+Content-Type: application/x-www-form-urlencoded
+
+username=ana@lojadaana.com&password=senha-forte-123
+
+### Login do cliente
+# @name loginCliente
+POST {{base}}/auth/clientes/token
+Content-Type: application/x-www-form-urlencoded
+
+username=joao@example.com&password=senha-forte-123
+
+@tokenLoja = {{loginLoja.response.body.access_token}}
+@tokenCliente = {{loginCliente.response.body.access_token}}
+# Ids das contas criadas acima (ajuste se o banco já tinha dados, ex.: seed)
+@lojaId = 6
+@clienteId = 5
+
+### Cliente passa a seguir a loja
+POST {{base}}/clientes/{{clienteId}}/seguindo/{{lojaId}}
+Authorization: Bearer {{tokenCliente}}
+
+### Cliente deixa de seguir a loja (204)
+DELETE {{base}}/clientes/{{clienteId}}/seguindo/{{lojaId}}
+Authorization: Bearer {{tokenCliente}}
+
+### Cliente volta a seguir a loja
+POST {{base}}/clientes/{{clienteId}}/seguindo/{{lojaId}}
+Authorization: Bearer {{tokenCliente}}
+
+### Loja publica novidade com preço
+POST {{base}}/lojas/{{lojaId}}/novidades
+Authorization: Bearer {{tokenLoja}}
+Content-Type: application/json
+
+{"texto": "Chegou a coleção de verão!", "preco": "199.90"}
+
+### Loja publica novidade sem preço
+POST {{base}}/lojas/{{lojaId}}/novidades
+Authorization: Bearer {{tokenLoja}}
+Content-Type: application/json
+
+{"texto": "Live hoje às 20h"}
+
+### Feed do cliente (padrão: 20 itens)
+# @name feed
+GET {{base}}/clientes/{{clienteId}}/feed
+Authorization: Bearer {{tokenCliente}}
+
+### Feed com limite
+GET {{base}}/clientes/{{clienteId}}/feed?limite=1
+Authorization: Bearer {{tokenCliente}}
+
+### Próxima página: usa o `proximo_cursor` da chamada "feed" acima (ou cole o valor)
+GET {{base}}/clientes/{{clienteId}}/feed?limite=1&cursor={{feed.response.body.proximo_cursor}}
+Authorization: Bearer {{tokenCliente}}
+
+### --- Erros (todos no mesmo formato) ---
+
+### 401: sem token
+GET {{base}}/clientes/{{clienteId}}/feed
+
+### 403: token de cliente tentando publicar como loja
+POST {{base}}/lojas/{{lojaId}}/novidades
+Authorization: Bearer {{tokenCliente}}
+Content-Type: application/json
+
+{"texto": "não deveria"}
+
+### 401: senha errada
+POST {{base}}/auth/clientes/token
+Content-Type: application/x-www-form-urlencoded
+
+username=joao@example.com&password=errada
+
+### 422: texto vazio e preço negativo
+POST {{base}}/lojas/{{lojaId}}/novidades
+Authorization: Bearer {{tokenLoja}}
+Content-Type: application/json
+
+{"texto": "", "preco": -10}
+
+### 409: e-mail já cadastrado
+POST {{base}}/clientes
+Content-Type: application/json
+
+{"nome": "Outro João", "email": "joao@example.com", "senha": "outra-senha-123"}
+
+### 404: loja inexistente
+POST {{base}}/clientes/{{clienteId}}/seguindo/9999
+Authorization: Bearer {{tokenCliente}}
+
+### 422: limite acima do máximo
+GET {{base}}/clientes/{{clienteId}}/feed?limite=51
+Authorization: Bearer {{tokenCliente}}

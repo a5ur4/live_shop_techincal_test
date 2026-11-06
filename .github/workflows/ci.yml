@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+
+  test:
+    name: Testes (pytest + Postgres)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: feed
+          POSTGRES_PASSWORD: feed
+          POSTGRES_DB: feed
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U feed -d feed"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql+asyncpg://feed:feed@localhost:5432/feed
+      TEST_DATABASE_URL: postgresql+asyncpg://feed:feed@localhost:5432/feed_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+      - name: Migrations sobem do zero e o schema bate com os modelos
+        run: |
+          uv run alembic upgrade head
+          uv run alembic check
+      - run: uv run pytest
+
+  docker:
+    name: Build da imagem
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build --target runtime -t feed-novidades:ci .
