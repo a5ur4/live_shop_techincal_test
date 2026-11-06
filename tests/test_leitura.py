@@ -117,11 +117,30 @@ async def test_novidades_de_loja_inexistente_retorna_404(client):
     assert_erro(await client.get("/lojas/999/novidades"), 404, "loja_nao_encontrada")
 
 
+def _cursor(dados: dict) -> str:
+    import base64
+    import json
+
+    return base64.urlsafe_b64encode(json.dumps(dados).encode()).decode().rstrip("=")
+
+
 @pytest.mark.parametrize("rota", ["/lojas", "/lojas/1/novidades"])
-async def test_cursor_invalido_nas_listas_de_lojas_retorna_422(client, rota):
+@pytest.mark.parametrize(
+    "cursor",
+    [
+        "lixo",
+        _cursor({"id": 2**64}),  # estouraria o BIGINT no Postgres
+        _cursor({"id": 0}),
+        _cursor({"id": -1}),
+        _cursor({"c": "2026-01-01T00:00:00+00:00", "id": 2**70}),
+        _cursor([1, 2]),
+    ],
+    ids=["lixo", "id_gigante", "id_zero", "id_negativo", "posicao_id_gigante", "nao_objeto"],
+)
+async def test_cursor_invalido_nas_listas_de_lojas_retorna_422(client, rota, cursor):
     await criar_loja(client)
 
-    resp = await client.get(rota, params={"cursor": "lixo"})
+    resp = await client.get(rota, params={"cursor": cursor})
 
     erro = assert_erro(resp, 422, "entrada_invalida")
     assert erro["detalhes"][0]["campo"] == "cursor"

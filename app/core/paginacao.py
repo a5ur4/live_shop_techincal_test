@@ -16,6 +16,15 @@ from app.core.errors import EntradaInvalidaError, ErroDetalhe
 
 Posicao = tuple[datetime, int]
 
+# Ids são BIGINT positivos; um id fora disso estouraria o parâmetro no Postgres (500).
+_ID_MAXIMO = 2**63 - 1
+
+
+def _id_valido(valor: object) -> int:
+    if type(valor) is not int or not 0 < valor <= _ID_MAXIMO:
+        raise ValueError
+    return valor
+
 
 def _codificar(dados: dict[str, Any]) -> str:
     bruto = json.dumps(dados, separators=(",", ":")).encode()
@@ -45,10 +54,17 @@ def decodificar_posicao(cursor: str) -> Posicao:
     try:
         dados = _decodificar(cursor)
         criado_em = datetime.fromisoformat(dados["c"])
-        item_id = dados["id"]
-        if criado_em.tzinfo is None or type(item_id) is not int:
+        item_id = _id_valido(dados["id"])
+        if criado_em.tzinfo is None:
             raise ValueError
-    except (binascii.Error, UnicodeDecodeError, ValueError, KeyError, TypeError) as exc:
+    except (
+        binascii.Error,
+        UnicodeDecodeError,
+        ValueError,
+        KeyError,
+        TypeError,
+        OverflowError,
+    ) as exc:
         raise _cursor_invalido() from exc
     return criado_em, item_id
 
@@ -59,9 +75,14 @@ def codificar_id(item_id: int) -> str:
 
 def decodificar_id(cursor: str) -> int:
     try:
-        item_id = _decodificar(cursor)["id"]
-        if type(item_id) is not int:
-            raise ValueError
-    except (binascii.Error, UnicodeDecodeError, ValueError, KeyError, TypeError) as exc:
+        item_id = _id_valido(_decodificar(cursor)["id"])
+    except (
+        binascii.Error,
+        UnicodeDecodeError,
+        ValueError,
+        KeyError,
+        TypeError,
+        OverflowError,
+    ) as exc:
         raise _cursor_invalido() from exc
     return item_id
