@@ -1,12 +1,14 @@
 services:
   db:
     image: postgres:17-alpine
+    # Credenciais padrão servem só para desenvolvimento local; em qualquer
+    # outro ambiente defina POSTGRES_PASSWORD (veja .env.example).
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-feed}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-feed}
       POSTGRES_DB: ${POSTGRES_DB:-feed}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
