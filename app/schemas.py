@@ -54,3 +54,9 @@ class ClienteOut(_Saida):
     nome: str
     email: str
     criado_em: datetime
+
+
+class SeguindoOut(_Saida):
+    cliente_id: int
+    loja_id: int
+    criado_em: datetime

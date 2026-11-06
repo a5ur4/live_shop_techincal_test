@@ -2,8 +2,9 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ConflitoError, NaoEncontradoError
-from app.models import Cliente
+from app.models import Cliente, Seguidor
 from app.schemas import ClienteCriar
+from app.services.lojas import obter_loja
 
 
 async def obter_cliente(session: AsyncSession, cliente_id: int) -> Cliente:
@@ -31,3 +32,23 @@ async def criar_cliente(session: AsyncSession, dados: ClienteCriar) -> Cliente:
         )
     await session.commit()
     return cliente
+
+
+async def seguir_loja(session: AsyncSession, cliente_id: int, loja_id: int) -> Seguidor:
+    await obter_cliente(session, cliente_id)
+    await obter_loja(session, loja_id)
+
+    # A PK (cliente_id, loja_id) resolve a corrida entre dois "seguir" iguais.
+    stmt = (
+        insert(Seguidor)
+        .values(cliente_id=cliente_id, loja_id=loja_id)
+        .on_conflict_do_nothing(index_elements=[Seguidor.cliente_id, Seguidor.loja_id])
+        .returning(Seguidor)
+    )
+    seguidor = await session.scalar(stmt)
+    if seguidor is None:
+        raise ConflitoError(
+            f"Cliente {cliente_id} já segue a loja {loja_id}.", codigo="ja_segue_loja"
+        )
+    await session.commit()
+    return seguidor
