@@ -40,6 +40,8 @@ services:
       FEED_CACHE_TTL_S: ${FEED_CACHE_TTL_S:-30}
       JWT_SECRET: ${JWT_SECRET:-}
       JWT_EXPIRA_MINUTOS: ${JWT_EXPIRA_MINUTOS:-30}
+      # Popula dados de exemplo no start se o banco estiver vazio (só desenvolvimento).
+      SEED_DB: ${SEED_DB:-true}
     ports:
       - "${API_PORT:-8000}:8000"
     # Só fica "healthy" depois das migrations e com o banco respondendo; permite
