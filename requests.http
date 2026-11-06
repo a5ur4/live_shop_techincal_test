@@ -1,0 +1,58 @@
+# Exemplos de chamada de todos os endpoints.
+# Funciona com a extensão REST Client (VS Code) e com o cliente HTTP do JetBrains.
+# Com `make up` + `make seed` os ids abaixo já existem.
+
+@base = http://localhost:8000
+
+### Cria uma loja
+POST {{base}}/lojas
+Content-Type: application/json
+
+{"nome": "Loja da Ana"}
+
+### Cria um cliente
+POST {{base}}/clientes
+Content-Type: application/json
+
+{"nome": "João Silva", "email": "joao@example.com"}
+
+### Cliente 1 passa a seguir a loja 1
+POST {{base}}/clientes/1/seguindo/1
+
+### Loja 1 publica novidade com preço
+POST {{base}}/lojas/1/novidades
+Content-Type: application/json
+
+{"texto": "Chegou a coleção de verão!", "preco": "199.90"}
+
+### Loja 1 publica novidade sem preço
+POST {{base}}/lojas/1/novidades
+Content-Type: application/json
+
+{"texto": "Live hoje às 20h"}
+
+### Feed do cliente 1 (padrão: 20 itens)
+GET {{base}}/clientes/1/feed
+
+### Feed com limite
+GET {{base}}/clientes/3/feed?limite=5
+
+### --- Erros (todos no mesmo formato) ---
+
+### 422: texto vazio e preço negativo
+POST {{base}}/lojas/1/novidades
+Content-Type: application/json
+
+{"texto": "", "preco": -10}
+
+### 409: e-mail já cadastrado
+POST {{base}}/clientes
+Content-Type: application/json
+
+{"nome": "Outro João", "email": "joao@example.com"}
+
+### 404: loja inexistente
+POST {{base}}/clientes/1/seguindo/9999
+
+### 422: limite acima do máximo
+GET {{base}}/clientes/1/feed?limite=51
