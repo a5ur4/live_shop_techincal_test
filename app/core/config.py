@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     # Usado só pela suíte de testes; o banco é criado automaticamente se não existir.
     test_database_url: str = "postgresql+asyncpg://feed:feed@localhost:5432/feed_test"
     sql_echo: bool = False
+    # Teto de tempo por query no Postgres: protege contra requisições caras (ex.: feed de
+    # quem segue milhares de lojas) segurando conexões indefinidamente.
+    db_statement_timeout_ms: int = 5000
 
 
 @lru_cache
