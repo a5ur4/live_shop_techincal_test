@@ -86,6 +86,7 @@ async def test_feed_inclui_dados_da_loja_e_preco(client):
             "texto": "Tênis novo",
             "preco": "299.90",
             "criado_em": novidade["criado_em"],
+            "editado_em": None,
         }
     ]
 

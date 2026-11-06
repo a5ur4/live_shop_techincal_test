@@ -3,7 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from app.schemas.base import Entrada, Senha
+from app.schemas.base import Edicao, Email, Entrada, Nome, Senha
 
 
 class TokenOut(BaseModel):
@@ -23,6 +23,19 @@ class RefreshIn(Entrada):
 class TrocaSenhaIn(Entrada):
     senha_atual: str = Field(min_length=1, max_length=128)
     nova_senha: Senha
+
+
+class ContaEditar(Edicao):
+    """Edição do perfil (cliente ou lojista). Senha tem rota própria: PUT /me/senha."""
+
+    nome: Nome = Field(default=None, examples=["Ana Maria"])
+    email: Email = Field(default=None, description="Também muda o login.")
+
+
+class ExcluirContaIn(Entrada):
+    senha: str = Field(
+        min_length=1, max_length=128, description="Senha atual, para confirmar a exclusão."
+    )
 
 
 class ContaOut(BaseModel):
