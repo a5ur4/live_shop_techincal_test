@@ -16,8 +16,6 @@ router = APIRouter(tags=["Saúde"])
 class HealthOut(BaseModel):
     status: str
     banco: str
-    # Informativo: sem Redis a API funciona (sem cache nem rate limit), então não vira 503.
-    cache: str
 
 
 class BancoIndisponivelError(AppError):
@@ -37,5 +35,8 @@ async def health(session: SessionDep, redis: RedisDep):
     except (SQLAlchemyError, OSError) as exc:
         logger.warning("Health check falhou: %s", exc)
         raise BancoIndisponivelError("Banco de dados indisponível.") from exc
-    cache = "ok" if await redis.ping() else "indisponivel"
-    return HealthOut(status="ok", banco="ok", cache=cache)
+    # Sem Redis a API funciona (degradada), então não vira 503. O estado do cache não é
+    # exposto nesta rota pública; só vai para o log, para quem opera.
+    if not await redis.ping():
+        logger.warning("Health check: Redis indisponível (cache e rate limit degradados).")
+    return HealthOut(status="ok", banco="ok")

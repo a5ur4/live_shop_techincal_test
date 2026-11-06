@@ -10,10 +10,10 @@ async def test_health_ok(client):
     resp = await client.get("/health")
 
     assert resp.status_code == 200
-    assert resp.json() == {"status": "ok", "banco": "ok", "cache": "ok"}
+    assert resp.json() == {"status": "ok", "banco": "ok"}
 
 
-async def test_health_sem_redis_continua_200_e_informa_cache_indisponivel(client):
+async def test_health_sem_redis_continua_200_sem_expor_o_motivo(client):
     from app.core.redis import ResilientRedis
 
     app.dependency_overrides[get_redis] = lambda: ResilientRedis(None)
@@ -21,7 +21,7 @@ async def test_health_sem_redis_continua_200_e_informa_cache_indisponivel(client
     resp = await client.get("/health")
 
     assert resp.status_code == 200
-    assert resp.json()["cache"] == "indisponivel"
+    assert resp.json() == {"status": "ok", "banco": "ok"}
 
 
 async def test_health_com_banco_fora_retorna_503(client):
