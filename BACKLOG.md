@@ -69,7 +69,7 @@ Marque `[x]` ao concluir e mantenha a ordem: **obrigatório antes de diferencial
 - [x] Troca de senha (`PUT /me/senha`) encerrando as sessões
 - [x] Cache da primeira página do feed (Redis, TTL 30s) — ADR 0008
 - [x] Benchmark com loja de 100 mil seguidores (`make benchmark`) — ADR 0008
-- [ ] Pull Request `feat/me-leitura-escala` → `main`
+- [x] Pull Request `feat/me-leitura-escala` → `main` ([#2](https://github.com/a5ur4/live_shop_techincal_test/pull/2))
 
 ## Ideias futuras (fora do escopo)
 
