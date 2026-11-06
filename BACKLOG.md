@@ -50,15 +50,17 @@ Marque `[x]` ao concluir e mantenha a ordem: **obrigatório antes de diferencial
 ## 5. Diferenciais (só após o obrigatório)
 
 - [x] `statement_timeout` nas conexões (proteção contra queries caras — ADR 0002)
-- [ ] `DELETE /clientes/{id}/seguindo/{lojaId}` (deixar de seguir)
-- [ ] Paginação por cursor no feed (`proximo_cursor`)
-- [ ] OpenAPI enriquecido (exemplos, respostas de erro documentadas)
-- [ ] CI no GitHub Actions (lint + testes com Postgres a cada push)
-- [ ] `GET /health` (verifica conexão com o banco)
+- [x] `DELETE /clientes/{id}/seguindo/{lojaId}` (deixar de seguir)
+- [x] Paginação por cursor no feed (`proximo_cursor`) — ADR 0006
+- [x] OpenAPI enriquecido (exemplos por código de erro, tags, testes de contrato)
+- [x] CI no GitHub Actions (lint + migrations + testes com Postgres + build da imagem)
+- [x] `GET /health` (verifica conexão com o banco) + healthcheck no compose
+- [x] Reorganização em `app/routes/`, `app/models/` e `app/schemas/` (um arquivo por entidade)
+- [x] Autenticação OAuth2 (password flow) + JWT para clientes e lojistas — ADR 0007
 
 ## Ideias futuras (fora do escopo)
 
+- Refresh token, revogação e rotas `/me/...`
+- Rate limiting no login (proteção contra força bruta)
 - Feed híbrido (fan-out na escrita para lojas pequenas, na leitura para lojas grandes)
 - Cache do feed (Redis) para clientes muito ativos
-- Autenticação
-- Rate limiting

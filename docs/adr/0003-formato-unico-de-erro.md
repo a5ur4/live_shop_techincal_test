@@ -28,7 +28,8 @@ Todo erro sai como:
 - `mensagem`: texto em português para humanos.
 - `detalhes`: sempre presente (lista vazia quando não se aplica).
 
-Implementação em `app/core/errors.py`: services levantam `NaoEncontradoError` (404),
+Implementação em `app/core/errors.py`: services e dependências levantam
+`NaoAutenticadoError` (401), `AcessoNegadoError` (403), `NaoEncontradoError` (404),
 `ConflitoError` (409) ou `EntradaInvalidaError` (422); handlers globais convertem essas
 exceções, além de `RequestValidationError`, `HTTPException` do Starlette (404/405 de rota) e
 qualquer `Exception` (500, sem vazar detalhes internos).
@@ -37,6 +38,8 @@ Códigos usados hoje:
 
 | HTTP | codigo |
 | --- | --- |
+| 401 | `nao_autenticado` (com `WWW-Authenticate: Bearer`), `credenciais_invalidas` |
+| 403 | `acesso_negado` |
 | 404 | `cliente_nao_encontrado`, `loja_nao_encontrada`, `nao_segue_loja`, `rota_nao_encontrada` |
 | 405 | `metodo_nao_permitido` |
 | 409 | `email_ja_cadastrado`, `ja_segue_loja` |
@@ -56,4 +59,6 @@ Códigos usados hoje:
 ## Consequências
 
 - Novo erro de negócio = nova subclasse ou `codigo=` específico; nunca `HTTPException` solta.
+- Todo `codigo` precisa estar em `CATALOGO_ERROS` (gera os exemplos do Swagger); um teste
+  (`tests/test_openapi.py`) falha se faltar.
 - Testes usam `assert_erro()` (`tests/helpers.py`), que valida status, formato e código.

@@ -18,6 +18,8 @@ CHECK constraints, `LATERAL` e ordenação por índice. SQLite ou mocks não rep
     testa que as migrations sobem e descem);
   - antes de cada teste faz `TRUNCATE ... RESTART IDENTITY`, então ids começam em 1;
   - troca a dependência `get_session` por uma sessão ligada ao banco de teste.
+- Argon2 com custo mínimo nos testes (fixture `hash_de_senha_rapido`): mesmo algoritmo,
+  ~1ms por hash em vez de ~50ms. Os helpers cadastram e já fazem login (`conta["token"]`).
 - Engine de teste usa `NullPool`, porque cada teste roda no seu próprio event loop e
   conexões asyncpg não podem ser compartilhadas entre loops.
 
@@ -32,4 +34,4 @@ CHECK constraints, `LATERAL` e ordenação por índice. SQLite ou mocks não rep
 
 - Rodar testes exige o Postgres no ar (`make db`), ou usar `make test-docker`, que precisa só
   de Docker. No CI o Postgres sobe como *service container*.
-- Suíte atual: ~60 testes em ~6s.
+- Suíte atual: ~100 testes em ~12s.

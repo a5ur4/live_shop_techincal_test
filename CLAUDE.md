@@ -7,8 +7,10 @@ no [BACKLOG](BACKLOG.md).
 
 ## Projeto em uma frase
 
-API FastAPI + PostgreSQL em que clientes seguem lojas e leem um feed com as novidades delas.
-Desafio técnico; enunciado em `docs/desafio.md`, que é a **fonte da verdade** dos requisitos.
+API FastAPI + PostgreSQL em que clientes seguem lojas e leem um feed com as novidades delas,
+com autenticação OAuth2/JWT para clientes e lojistas. Desafio técnico; enunciado em
+`docs/desafio.md`, que é a **fonte da verdade** dos requisitos — exceto a autenticação, que
+foi adicionada por decisão do time (ADR 0007).
 
 ## Comandos
 
@@ -34,7 +36,7 @@ app/routes/     HTTP fino: rota, status code, parâmetros, `responses=respostas_
 app/services/   regra de negócio + queries; levanta AppError; faz commit
 app/models/     tabelas SQLAlchemy, um arquivo por entidade (constraints e índices aqui)
 app/schemas/    Pydantic por recurso: entrada (`Entrada`, extra="forbid") e saída (`Saida`)
-app/core/       config (env), db (engine/sessão), errors (formato único de erro)
+app/core/       config (env), db (engine/sessão), security (JWT, hash de senha), errors
 ```
 
 Dependências só vão para baixo: `routes → services → models`. Rotas **não** acessam o banco
@@ -44,9 +46,16 @@ direto; services **não** importam FastAPI (exceto via `app.core.errors`).
 
 - **Idioma**: domínio, rotas, campos JSON, mensagens e docs em **português**
   (`loja`, `novidade`, `criado_em`). Palavras técnicas do framework ficam em inglês.
-- **Erros**: nunca `HTTPException`. Levante `NaoEncontradoError` / `ConflitoError` /
-  `EntradaInvalidaError` de `app/core/errors.py`, sempre com `codigo=` específico em
-  snake_case (ex.: `loja_nao_encontrada`). Novo código → adicionar na tabela do ADR 0003.
+- **Erros**: nunca `HTTPException`. Levante `NaoAutenticadoError` / `AcessoNegadoError` /
+  `NaoEncontradoError` / `ConflitoError` / `EntradaInvalidaError` de `app/core/errors.py`,
+  sempre com `codigo=` específico em snake_case (ex.: `loja_nao_encontrada`). Novo código →
+  adicionar em `CATALOGO_ERROS` (o teste de OpenAPI falha se faltar) e na tabela do ADR 0003.
+- **Autenticação**: rota que age em nome de um cliente usa `cliente_id: ClienteAutenticado`;
+  em nome de uma loja, `loja_id: LojaAutenticada` (`app/routes/deps.py`). Isso valida o
+  token e o dono do id; não reimplemente essa checagem na rota ou no service. Rotas públicas
+  (cadastro, login, health) usam `ClienteId`/`LojaId` ou nenhum id. Ver ADR 0007.
+- **Segredos**: senha só entra como hash (`gerar_hash_senha`) e nunca sai em resposta.
+  `JWT_SECRET` vem do ambiente; nunca escreva chave real em código, teste ou `.env.example`.
 - **Unicidade**: use `insert(...).on_conflict_do_nothing(...).returning(...)` e trate `None`
   como 409. Não faça "SELECT para checar e depois INSERT" (tem corrida).
 - **Dinheiro**: `Decimal`/`NUMERIC(12,2)`, nunca `float`. Sai como string no JSON.
@@ -63,11 +72,14 @@ direto; services **não** importam FastAPI (exceto via `app.core.errors`).
    exporte em `app/schemas/__init__.py`.
 2. Função no service adequado em `app/services/` levantando `AppError` nos casos de erro.
 3. Rota em `app/routes/` com `status_code`, `response_model`, `responses=respostas_erro(...)`
-   e `summary`.
+   e `summary`. Protegida? Use `ClienteAutenticado`/`LojaAutenticada`, inclua
+   `"nao_autenticado", "acesso_negado"` em `respostas_erro` e a rota em `ROTAS_PROTEGIDAS`
+   de `tests/test_openapi.py` (e em `ROTAS_ESPERADAS` de qualquer forma).
 4. Mudou tabela? Modelo novo em `app/models/<entidade>.py`, importado em
    `app/models/__init__.py` (senão o Alembic não enxerga), e migration (ver acima).
-5. Testes em `tests/test_<area>.py`: caminho feliz + cada erro, usando `tests/helpers.py`
-   (`criar_loja`, `criar_cliente`, `seguir`, `publicar`, `assert_erro`).
+5. Testes em `tests/test_<area>.py`: caminho feliz + cada erro (inclusive 401 e 403), usando
+   `tests/helpers.py` (`criar_loja`, `criar_cliente`, `seguir`, `publicar`, `auth`,
+   `assert_erro`).
 6. Exemplo em `requests.http`, linha na tabela de endpoints do README.
 7. Decisão não óbvia? Registre em `docs/adr/` (novo ADR ou tabela do 0004).
 8. `make check` verde.
@@ -79,6 +91,9 @@ direto; services **não** importam FastAPI (exceto via `app.core.errors`).
 - `tests/conftest.py` cria o banco, roda migrations (`downgrade base` + `upgrade head`) e
   faz `TRUNCATE ... RESTART IDENTITY` antes de cada teste — ids sempre começam em 1.
 - Testes são `async def` simples (`asyncio_mode = "auto"`), sem decorator.
+- `criar_cliente`/`criar_loja` cadastram **e fazem login**; o token vem em `conta["token"]` e
+  `auth(conta)` monta o header. E-mails são gerados únicos se não informados.
+- O hash de senha nos testes usa argon2 de custo mínimo (fixture `hash_de_senha_rapido`).
 - Para cenários com horário controlado, insira direto via fixture `engine` (ver
   `test_feed_desempata_pelo_id_quando_horario_e_igual`).
 
@@ -92,6 +107,9 @@ direto; services **não** importam FastAPI (exceto via `app.core.errors`).
 - Valores de `server_default` (ex.: `criado_em`) voltam via `RETURNING` no insert (eager
   defaults do SQLAlchemy 2); não precisa de `refresh`.
 - `Preco` é normalizado para 2 casas no schema, para a resposta do POST bater com o banco.
+- `app.core.security` lê `JWT_SECRET` no import; sem ela, gera chave aleatória por processo
+  (cada worker teria uma chave diferente — em produção, sempre defina).
+- O form do login é OAuth2 (`username`/`password`, `x-www-form-urlencoded`), não JSON.
 - `alembic.ini` não tem URL: `migrations/env.py` lê `DATABASE_URL`; os testes injetam a URL
   de teste via `sqlalchemy.url`.
 
