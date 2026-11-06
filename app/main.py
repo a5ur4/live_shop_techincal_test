@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from app.api import clientes, lojas
 from app.core.errors import register_error_handlers
 
 
@@ -10,6 +11,8 @@ def create_app() -> FastAPI:
         description="Clientes seguem lojas e acompanham, num feed, as novidades que elas publicam.",
     )
     register_error_handlers(app)
+    app.include_router(lojas.router)
+    app.include_router(clientes.router)
     return app
 
 
