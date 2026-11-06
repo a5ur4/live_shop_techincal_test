@@ -5,17 +5,24 @@ Uso:
     python -m app.seed --reset    # apaga tudo e popula de novo
 
 No Docker: `docker compose exec api python -m app.seed` (ou `make seed`).
+
+Todas as contas usam a senha SENHA_SEED (apenas para desenvolvimento). E-mail das lojas:
+o slug do nome + "@lojas.example.com" (ex.: modadaana@lojas.example.com).
 """
 
 import argparse
 import asyncio
+import unicodedata
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy import func, select, text
 
 from app.core.db import SessionLocal, engine
+from app.core.security import gerar_hash_senha
 from app.models import Cliente, Loja, Novidade, Seguidor
+
+SENHA_SEED = "senha123"
 
 LOJAS = ["Moda da Ana", "Tech do Bruno", "Casa & Cia", "Livraria Central", "Esportes Já"]
 
@@ -42,6 +49,12 @@ NOVIDADES = [
 ]
 
 
+def email_da_loja(nome: str) -> str:
+    sem_acento = unicodedata.normalize("NFKD", nome.lower()).encode("ascii", "ignore").decode()
+    slug = "".join(c for c in sem_acento if c.isalnum())
+    return f"{slug}@lojas.example.com"
+
+
 async def seed(reset: bool) -> None:
     async with SessionLocal() as session:
         if reset:
@@ -52,12 +65,16 @@ async def seed(reset: bool) -> None:
             print("Banco já tem dados; nada feito. Use --reset para recriar.")
             return
 
-        lojas = {nome: Loja(nome=nome) for nome in LOJAS}
+        senha_hash = gerar_hash_senha(SENHA_SEED)
+        lojas = {
+            nome: Loja(nome=nome, email=email_da_loja(nome), senha_hash=senha_hash)
+            for nome in LOJAS
+        }
         session.add_all(lojas.values())
         await session.flush()
 
         for nome, email, seguidas in CLIENTES:
-            cliente = Cliente(nome=nome, email=email)
+            cliente = Cliente(nome=nome, email=email, senha_hash=senha_hash)
             session.add(cliente)
             await session.flush()
             session.add_all(Seguidor(cliente_id=cliente.id, loja_id=lojas[n].id) for n in seguidas)
@@ -77,9 +94,12 @@ async def seed(reset: bool) -> None:
         await session.commit()
 
     print(
-        f"Seed concluído: {len(LOJAS)} lojas, {len(CLIENTES)} clientes, "
-        f"{len(NOVIDADES)} novidades. Ex.: GET /clientes/3/feed (Elisa segue todas as lojas)."
+        f"Seed concluído: {len(LOJAS)} lojas, {len(CLIENTES)} clientes, {len(NOVIDADES)} novidades."
     )
+    print(f"Senha de todas as contas: {SENHA_SEED}")
+    print("Clientes:", ", ".join(email for _, email, _ in CLIENTES))
+    print("Lojas:   ", ", ".join(email_da_loja(n) for n in LOJAS))
+    print("Ex.: login de elisa@example.com (segue todas as lojas) e GET /clientes/3/feed.")
 
 
 async def main() -> None:
