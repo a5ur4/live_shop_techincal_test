@@ -45,7 +45,7 @@ Marque `[x]` ao concluir e mantenha a ordem: **obrigatório antes de diferencial
 - [x] `README.md` (rodar, testar, exemplos, estrutura, decisões, o que ficou de fora)
 - [x] `CLAUDE.md` / `AGENTS.md` para continuidade por pessoas e agentes
 - [x] ADRs em `docs/adr/`
-- [ ] Pull Request `feat/feed-api` → `main` com descrição
+- [x] Pull Request `feat/feed-api` → `main` com descrição ([#1](https://github.com/a5ur4/live_shop_techincal_test/pull/1))
 
 ## 5. Diferenciais (só após o obrigatório)
 
