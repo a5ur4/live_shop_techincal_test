@@ -162,5 +162,6 @@ def respostas_erro(*codigos: int) -> dict[int | str, dict[str, Any]]:
         404: "Recurso não encontrado",
         409: "Conflito com o estado atual",
         422: "Entrada inválida",
+        503: "Serviço indisponível",
     }
     return {c: {"model": ErroResponse, "description": descricoes.get(c, "Erro")} for c in codigos}

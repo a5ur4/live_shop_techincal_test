@@ -25,6 +25,18 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-feed}:${POSTGRES_PASSWORD:-feed}@db:5432/${POSTGRES_DB:-feed}
     ports:
       - "${API_PORT:-8000}:8000"
+    # Só fica "healthy" depois das migrations e com o banco respondendo; permite
+    # `docker compose up --wait` e scripts que dependem da API pronta.
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)"
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
     depends_on:
       db:
         condition: service_healthy

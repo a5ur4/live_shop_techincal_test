@@ -37,11 +37,12 @@ Códigos usados hoje:
 
 | HTTP | codigo |
 | --- | --- |
-| 404 | `cliente_nao_encontrado`, `loja_nao_encontrada`, `rota_nao_encontrada` |
+| 404 | `cliente_nao_encontrado`, `loja_nao_encontrada`, `nao_segue_loja`, `rota_nao_encontrada` |
 | 405 | `metodo_nao_permitido` |
 | 409 | `email_ja_cadastrado`, `ja_segue_loja` |
 | 422 | `entrada_invalida` |
 | 500 | `erro_interno` |
+| 503 | `banco_indisponivel` (`GET /health`) |
 
 ## Alternativas consideradas
 

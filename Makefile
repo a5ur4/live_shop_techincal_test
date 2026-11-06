@@ -5,7 +5,7 @@ help: ## Lista os comandos disponíveis
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
 up: ## Sobe Postgres + API (migrations automáticas) em http://localhost:8000
-	docker compose up -d --build
+	docker compose up -d --build --wait
 
 down: ## Derruba os containers (mantém os dados)
 	docker compose down

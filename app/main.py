@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.api import clientes, lojas
+from app.api import clientes, health, lojas
 from app.core.errors import register_error_handlers
 
 
@@ -13,6 +13,7 @@ def create_app() -> FastAPI:
     register_error_handlers(app)
     app.include_router(lojas.router)
     app.include_router(clientes.router)
+    app.include_router(health.router)
     return app
 
 

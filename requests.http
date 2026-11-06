@@ -4,6 +4,9 @@
 
 @base = http://localhost:8000
 
+### Saúde da API e do banco
+GET {{base}}/health
+
 ### Cria uma loja
 POST {{base}}/lojas
 Content-Type: application/json
