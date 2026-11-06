@@ -369,7 +369,7 @@ function telaInicial() {
     h(
       "p",
       { class: "dica" },
-      "Com o seed carregado (make seed), há contas de exemplo com a senha senha123: ",
+      "Com o seed carregado (automático no make up), há contas de exemplo com a senha senha123: ",
       "clientes carla@example.com, diego@example.com; lojistas modadaana@lojas.example.com, entre outros.",
     ),
   );

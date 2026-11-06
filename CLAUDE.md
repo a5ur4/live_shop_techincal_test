@@ -15,8 +15,9 @@ foi adicionada por decisão do time (ADR 0007).
 ## Comandos
 
 ```bash
-make up            # Docker: Postgres + API em :8000 (migrations automáticas)
-make seed          # dados de exemplo no banco do Docker
+make up            # Docker: Postgres + API em :8000 (migrations e seed automáticos;
+                   # SEED_DB=false desliga o seed)
+make seed          # roda o seed de novo no Docker (só popula banco vazio)
 make db            # Postgres + Redis (para rodar API/testes com uv)
 make dev           # API local com reload (uv)
 make test          # testes com uv (sobe o Postgres se preciso)

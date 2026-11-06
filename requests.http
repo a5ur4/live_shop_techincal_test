@@ -1,7 +1,7 @@
 # Exemplos de chamada de todos os endpoints.
 # Funciona com a extensão REST Client (VS Code) e com o cliente HTTP do JetBrains.
 # Rode em ordem: os logins guardam o token em variáveis usadas nas rotas protegidas.
-# Com `make up` + `make seed`, use as contas do seed (senha: senha123).
+# Com `make up` (o seed roda sozinho), use as contas do seed (senha: senha123).
 
 @base = http://localhost:8000
 
