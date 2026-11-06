@@ -3,6 +3,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ConflitoError, NaoEncontradoError
+from app.core.security import gerar_hash_senha
 from app.models import Cliente, Seguidor
 from app.schemas import ClienteCriar
 from app.services.lojas import obter_loja
@@ -22,7 +23,7 @@ async def criar_cliente(session: AsyncSession, dados: ClienteCriar) -> Cliente:
     # pelo banco mesmo com duas requisições simultâneas para o mesmo e-mail.
     stmt = (
         insert(Cliente)
-        .values(nome=dados.nome, email=dados.email)
+        .values(nome=dados.nome, email=dados.email, senha_hash=gerar_hash_senha(dados.senha))
         .on_conflict_do_nothing(index_elements=[Cliente.email])
         .returning(Cliente)
     )

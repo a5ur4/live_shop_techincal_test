@@ -11,6 +11,8 @@ from app.models import NOME_MAX, TEXTO_MAX
 Nome = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=NOME_MAX)]
 Texto = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=TEXTO_MAX)]
 Email = Annotated[EmailStr, AfterValidator(str.lower)]
+# Sem regra de composição; só tamanho. 128 limita o custo do hash (evita DoS com senha enorme).
+Senha = Annotated[str, StringConstraints(min_length=8, max_length=128)]
 # Normaliza para 2 casas ("10" -> "10.00") para a resposta sair igual ao que o banco guarda.
 Preco = Annotated[
     Decimal,

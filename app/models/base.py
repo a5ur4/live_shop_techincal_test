@@ -13,6 +13,8 @@ NAMING_CONVENTION = {
 }
 
 NOME_MAX = 120
+EMAIL_MAX = 254
+SENHA_HASH_MAX = 255
 
 
 class Base(DeclarativeBase):

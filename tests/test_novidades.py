@@ -1,12 +1,14 @@
 import pytest
 
-from tests.helpers import assert_erro, criar_loja
+from tests.helpers import assert_erro, auth, criar_loja
 
 
 async def test_publica_novidade_sem_preco(client):
     loja = await criar_loja(client)
 
-    resp = await client.post(f"/lojas/{loja['id']}/novidades", json={"texto": "Live hoje às 20h"})
+    resp = await client.post(
+        f"/lojas/{loja['id']}/novidades", json={"texto": "Live hoje às 20h"}, headers=auth(loja)
+    )
 
     assert resp.status_code == 201
     corpo = resp.json()
@@ -23,7 +25,9 @@ async def test_publica_novidade_com_preco(client, enviado, esperado):
     loja = await criar_loja(client)
 
     resp = await client.post(
-        f"/lojas/{loja['id']}/novidades", json={"texto": "Promo", "preco": enviado}
+        f"/lojas/{loja['id']}/novidades",
+        json={"texto": "Promo", "preco": enviado},
+        headers=auth(loja),
     )
 
     assert resp.status_code == 201
@@ -34,7 +38,9 @@ async def test_publica_novidade_com_preco(client, enviado, esperado):
 async def test_texto_nos_limites_e_aceito(client, texto):
     loja = await criar_loja(client)
 
-    resp = await client.post(f"/lojas/{loja['id']}/novidades", json={"texto": texto})
+    resp = await client.post(
+        f"/lojas/{loja['id']}/novidades", json={"texto": texto}, headers=auth(loja)
+    )
 
     assert resp.status_code == 201
 
@@ -43,7 +49,9 @@ async def test_texto_nos_limites_e_aceito(client, texto):
 async def test_texto_invalido_retorna_422(client, texto):
     loja = await criar_loja(client)
 
-    resp = await client.post(f"/lojas/{loja['id']}/novidades", json={"texto": texto})
+    resp = await client.post(
+        f"/lojas/{loja['id']}/novidades", json={"texto": texto}, headers=auth(loja)
+    )
 
     erro = assert_erro(resp, 422, "entrada_invalida")
     assert erro["detalhes"][0]["campo"] == "texto"
@@ -52,7 +60,9 @@ async def test_texto_invalido_retorna_422(client, texto):
 async def test_texto_obrigatorio(client):
     loja = await criar_loja(client)
 
-    resp = await client.post(f"/lojas/{loja['id']}/novidades", json={"preco": "10"})
+    resp = await client.post(
+        f"/lojas/{loja['id']}/novidades", json={"preco": "10"}, headers=auth(loja)
+    )
 
     erro = assert_erro(resp, 422, "entrada_invalida")
     assert erro["detalhes"][0] == {"campo": "texto", "mensagem": "Campo obrigatório."}
@@ -63,14 +73,30 @@ async def test_preco_invalido_retorna_422(client, preco):
     loja = await criar_loja(client)
 
     resp = await client.post(
-        f"/lojas/{loja['id']}/novidades", json={"texto": "Promo", "preco": preco}
+        f"/lojas/{loja['id']}/novidades",
+        json={"texto": "Promo", "preco": preco},
+        headers=auth(loja),
     )
 
     erro = assert_erro(resp, 422, "entrada_invalida")
     assert erro["detalhes"][0]["campo"] == "preco"
 
 
-async def test_publicar_em_loja_inexistente_retorna_404(client):
-    resp = await client.post("/lojas/999/novidades", json={"texto": "Oi"})
+async def test_publicar_exige_token_de_lojista(client):
+    loja = await criar_loja(client)
 
-    assert_erro(resp, 404, "loja_nao_encontrada")
+    resp = await client.post(f"/lojas/{loja['id']}/novidades", json={"texto": "Oi"})
+
+    assert_erro(resp, 401, "nao_autenticado")
+
+
+async def test_publicar_em_outra_loja_retorna_403(client):
+    # Também cobre "loja inexistente": o token nunca é de um id que não existe.
+    minha = await criar_loja(client)
+    outra = await criar_loja(client)
+
+    for loja_id in (outra["id"], 999):
+        resp = await client.post(
+            f"/lojas/{loja_id}/novidades", json={"texto": "Oi"}, headers=auth(minha)
+        )
+        assert_erro(resp, 403, "acesso_negado")

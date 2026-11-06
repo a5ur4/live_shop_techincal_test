@@ -4,8 +4,8 @@ Todo modelo novo precisa ser importado aqui: o Alembic (migrations/env.py) enxer
 apenas o que estiver registrado em `Base.metadata` ao importar `app.models`.
 """
 
-from app.models.base import NOME_MAX, Base
-from app.models.cliente import EMAIL_MAX, Cliente
+from app.models.base import EMAIL_MAX, NOME_MAX, Base
+from app.models.cliente import Cliente
 from app.models.loja import Loja
 from app.models.novidade import TEXTO_MAX, Novidade
 from app.models.seguidor import Seguidor

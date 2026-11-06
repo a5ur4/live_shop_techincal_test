@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Query, status
 
 from app.core.errors import respostas_erro
-from app.routes.deps import ClienteId, LojaId, SessionDep
+from app.routes.deps import ClienteAutenticado, LojaId, SessionDep
 from app.schemas import ClienteCriar, ClienteOut, FeedOut, SeguindoOut
 from app.services import clientes as service
 from app.services import feed as feed_service
@@ -30,11 +30,15 @@ async def criar_cliente(dados: ClienteCriar, session: SessionDep):
     status_code=status.HTTP_201_CREATED,
     response_model=SeguindoOut,
     responses=respostas_erro(
-        "cliente_nao_encontrado", "loja_nao_encontrada", "ja_segue_loja", "entrada_invalida"
+        "nao_autenticado",
+        "acesso_negado",
+        "loja_nao_encontrada",
+        "ja_segue_loja",
+        "entrada_invalida",
     ),
     summary="Cliente passa a seguir uma loja",
 )
-async def seguir_loja(cliente_id: ClienteId, loja_id: LojaId, session: SessionDep):
+async def seguir_loja(cliente_id: ClienteAutenticado, loja_id: LojaId, session: SessionDep):
     return await service.seguir_loja(session, cliente_id, loja_id)
 
 
@@ -42,18 +46,24 @@ async def seguir_loja(cliente_id: ClienteId, loja_id: LojaId, session: SessionDe
     "/{cliente_id}/seguindo/{loja_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     responses=respostas_erro(
-        "cliente_nao_encontrado", "loja_nao_encontrada", "nao_segue_loja", "entrada_invalida"
+        "nao_autenticado",
+        "acesso_negado",
+        "loja_nao_encontrada",
+        "nao_segue_loja",
+        "entrada_invalida",
     ),
     summary="Cliente deixa de seguir uma loja",
 )
-async def deixar_de_seguir(cliente_id: ClienteId, loja_id: LojaId, session: SessionDep) -> None:
+async def deixar_de_seguir(
+    cliente_id: ClienteAutenticado, loja_id: LojaId, session: SessionDep
+) -> None:
     await service.deixar_de_seguir(session, cliente_id, loja_id)
 
 
 @router.get(
     "/{cliente_id}/feed",
     response_model=FeedOut,
-    responses=respostas_erro("cliente_nao_encontrado", "entrada_invalida"),
+    responses=respostas_erro("nao_autenticado", "acesso_negado", "entrada_invalida"),
     summary="Feed com as novidades das lojas seguidas",
     description=(
         "Novidades das lojas que o cliente segue, da mais recente para a mais antiga. "
@@ -61,7 +71,7 @@ async def deixar_de_seguir(cliente_id: ClienteId, loja_id: LojaId, session: Sess
     ),
 )
 async def feed(
-    cliente_id: ClienteId,
+    cliente_id: ClienteAutenticado,
     session: SessionDep,
     limite: Annotated[
         int, Query(ge=1, le=LIMITE_MAXIMO, description="Quantidade de itens (1 a 50).")

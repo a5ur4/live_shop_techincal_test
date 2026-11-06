@@ -48,12 +48,33 @@ class AppError(Exception):
         *,
         codigo: str | None = None,
         detalhes: list[ErroDetalhe] | None = None,
+        headers: dict[str, str] | None = None,
     ) -> None:
         super().__init__(mensagem)
         self.mensagem = mensagem
         if codigo:
             self.codigo = codigo
         self.detalhes = detalhes or []
+        self.headers = headers
+
+
+class NaoAutenticadoError(AppError):
+    """401: sem token, token inválido/expirado ou credenciais erradas no login."""
+
+    status_code = status.HTTP_401_UNAUTHORIZED
+    codigo = "nao_autenticado"
+
+    def __init__(self, mensagem: str = "Autenticação necessária.", **kwargs) -> None:
+        # RFC 6750: respostas 401 de recursos protegidos por Bearer informam o esquema.
+        kwargs.setdefault("headers", {"WWW-Authenticate": "Bearer"})
+        super().__init__(mensagem, **kwargs)
+
+
+class AcessoNegadoError(AppError):
+    """403: autenticado, mas o token não pertence ao recurso da URL."""
+
+    status_code = status.HTTP_403_FORBIDDEN
+    codigo = "acesso_negado"
 
 
 class NaoEncontradoError(AppError):
@@ -112,13 +133,17 @@ def _mensagem(erro: dict[str, Any]) -> str:
         return modelo
 
 
-def _resposta(status_code: int, codigo: str, mensagem: str, detalhes=None) -> JSONResponse:
+def _resposta(
+    status_code: int, codigo: str, mensagem: str, detalhes=None, headers=None
+) -> JSONResponse:
     corpo = ErroResponse(erro=Erro(codigo=codigo, mensagem=mensagem, detalhes=detalhes or []))
-    return JSONResponse(status_code=status_code, content=corpo.model_dump(mode="json"))
+    return JSONResponse(
+        status_code=status_code, content=corpo.model_dump(mode="json"), headers=headers
+    )
 
 
 async def _app_error_handler(_: Request, exc: AppError) -> JSONResponse:
-    return _resposta(exc.status_code, exc.codigo, exc.mensagem, exc.detalhes)
+    return _resposta(exc.status_code, exc.codigo, exc.mensagem, exc.detalhes, exc.headers)
 
 
 async def _validation_handler(_: Request, exc: RequestValidationError) -> JSONResponse:
@@ -161,16 +186,21 @@ def register_error_handlers(app: FastAPI) -> None:
 # Catálogo de erros: código -> (status HTTP, exemplo de mensagem). Alimenta os exemplos
 # do Swagger; ao criar um código novo, adicione aqui e na tabela do ADR 0003.
 CATALOGO_ERROS: dict[str, tuple[int, str]] = {
+    "nao_autenticado": (401, "Token ausente, inválido ou expirado."),
+    "credenciais_invalidas": (401, "E-mail ou senha incorretos."),
+    "acesso_negado": (403, "Este token não dá acesso a este cliente."),
     "cliente_nao_encontrado": (404, "Cliente 42 não encontrado."),
     "loja_nao_encontrada": (404, "Loja 7 não encontrada."),
     "nao_segue_loja": (404, "Cliente 42 não segue a loja 7."),
-    "email_ja_cadastrado": (409, "Já existe um cliente com o e-mail ana@example.com."),
+    "email_ja_cadastrado": (409, "Já existe um cadastro com o e-mail ana@example.com."),
     "ja_segue_loja": (409, "Cliente 42 já segue a loja 7."),
     "entrada_invalida": (422, "Dados de entrada inválidos."),
     "banco_indisponivel": (503, "Banco de dados indisponível."),
 }
 
 _DESCRICOES_STATUS = {
+    401: "Não autenticado",
+    403: "Sem permissão para este recurso",
     404: "Recurso não encontrado",
     409: "Conflito com o estado atual",
     422: "Entrada inválida",

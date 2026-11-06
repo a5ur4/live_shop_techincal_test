@@ -1,11 +1,11 @@
 import pytest
 from sqlalchemy import text
 
-from tests.helpers import assert_erro, criar_cliente, criar_loja, publicar, seguir
+from tests.helpers import assert_erro, auth, criar_cliente, criar_loja, publicar, seguir
 
 
-async def _textos(client, cliente_id: int, **params) -> list[str]:
-    resp = await client.get(f"/clientes/{cliente_id}/feed", params=params)
+async def _textos(client, cliente: dict, **params) -> list[str]:
+    resp = await client.get(f"/clientes/{cliente['id']}/feed", params=params, headers=auth(cliente))
     assert resp.status_code == 200, resp.text
     return [item["texto"] for item in resp.json()["itens"]]
 
@@ -15,14 +15,14 @@ async def test_feed_traz_so_novidades_de_lojas_seguidas(client):
     seguida = await criar_loja(client, "Seguida")
     outra_seguida = await criar_loja(client, "Outra seguida")
     nao_seguida = await criar_loja(client, "Não seguida")
-    await seguir(client, cliente["id"], seguida["id"])
-    await seguir(client, cliente["id"], outra_seguida["id"])
+    await seguir(client, cliente, seguida["id"])
+    await seguir(client, cliente, outra_seguida["id"])
 
-    await publicar(client, seguida["id"], "A1")
-    await publicar(client, nao_seguida["id"], "N1")
-    await publicar(client, outra_seguida["id"], "B1")
+    await publicar(client, seguida, "A1")
+    await publicar(client, nao_seguida, "N1")
+    await publicar(client, outra_seguida, "B1")
 
-    assert sorted(await _textos(client, cliente["id"])) == ["A1", "B1"]
+    assert sorted(await _textos(client, cliente)) == ["A1", "B1"]
 
 
 async def test_feed_nao_mistura_clientes(client):
@@ -30,33 +30,33 @@ async def test_feed_nao_mistura_clientes(client):
     bia = await criar_cliente(client, email="bia@example.com")
     loja_ana = await criar_loja(client)
     loja_bia = await criar_loja(client)
-    await seguir(client, ana["id"], loja_ana["id"])
-    await seguir(client, bia["id"], loja_bia["id"])
-    await publicar(client, loja_ana["id"], "da Ana")
-    await publicar(client, loja_bia["id"], "da Bia")
+    await seguir(client, ana, loja_ana["id"])
+    await seguir(client, bia, loja_bia["id"])
+    await publicar(client, loja_ana, "da Ana")
+    await publicar(client, loja_bia, "da Bia")
 
-    assert await _textos(client, ana["id"]) == ["da Ana"]
-    assert await _textos(client, bia["id"]) == ["da Bia"]
+    assert await _textos(client, ana) == ["da Ana"]
+    assert await _textos(client, bia) == ["da Bia"]
 
 
 async def test_feed_vem_da_mais_recente_para_a_mais_antiga(client):
     cliente = await criar_cliente(client)
     loja_a = await criar_loja(client)
     loja_b = await criar_loja(client)
-    await seguir(client, cliente["id"], loja_a["id"])
-    await seguir(client, cliente["id"], loja_b["id"])
+    await seguir(client, cliente, loja_a["id"])
+    await seguir(client, cliente, loja_b["id"])
 
     # Intercala as lojas para garantir que a ordem é global, não por loja.
     for i, loja in enumerate([loja_a, loja_b, loja_a, loja_b, loja_a]):
-        await publicar(client, loja["id"], f"N{i}")
+        await publicar(client, loja, f"N{i}")
 
-    assert await _textos(client, cliente["id"]) == ["N4", "N3", "N2", "N1", "N0"]
+    assert await _textos(client, cliente) == ["N4", "N3", "N2", "N1", "N0"]
 
 
 async def test_feed_desempata_pelo_id_quando_horario_e_igual(client, engine):
     cliente = await criar_cliente(client)
     loja = await criar_loja(client)
-    await seguir(client, cliente["id"], loja["id"])
+    await seguir(client, cliente, loja["id"])
     async with engine.begin() as conn:
         await conn.execute(
             text(
@@ -68,16 +68,16 @@ async def test_feed_desempata_pelo_id_quando_horario_e_igual(client, engine):
             {"loja": loja["id"]},
         )
 
-    assert await _textos(client, cliente["id"]) == ["segunda", "primeira", "mais antiga"]
+    assert await _textos(client, cliente) == ["segunda", "primeira", "mais antiga"]
 
 
 async def test_feed_inclui_dados_da_loja_e_preco(client):
     cliente = await criar_cliente(client)
     loja = await criar_loja(client, "Loja da Ana")
-    await seguir(client, cliente["id"], loja["id"])
-    novidade = await publicar(client, loja["id"], "Tênis novo", preco="299.90")
+    await seguir(client, cliente, loja["id"])
+    novidade = await publicar(client, loja, "Tênis novo", preco="299.90")
 
-    resp = await client.get(f"/clientes/{cliente['id']}/feed")
+    resp = await client.get(f"/clientes/{cliente['id']}/feed", headers=auth(cliente))
 
     assert resp.json()["itens"] == [
         {
@@ -93,89 +93,94 @@ async def test_feed_inclui_dados_da_loja_e_preco(client):
 async def test_feed_vazio_quando_nao_segue_ninguem(client):
     cliente = await criar_cliente(client)
     loja = await criar_loja(client)
-    await publicar(client, loja["id"], "ninguém vê")
+    await publicar(client, loja, "ninguém vê")
 
-    assert await _textos(client, cliente["id"]) == []
+    assert await _textos(client, cliente) == []
 
 
 async def test_feed_inclui_novidades_publicadas_antes_de_seguir(client):
     cliente = await criar_cliente(client)
     loja = await criar_loja(client)
-    await publicar(client, loja["id"], "antiga")
-    await seguir(client, cliente["id"], loja["id"])
+    await publicar(client, loja, "antiga")
+    await seguir(client, cliente, loja["id"])
 
-    assert await _textos(client, cliente["id"]) == ["antiga"]
+    assert await _textos(client, cliente) == ["antiga"]
 
 
-async def _cenario_com_novidades(client, quantidade: int) -> int:
+async def _cenario_com_novidades(client, quantidade: int) -> dict:
     cliente = await criar_cliente(client)
     loja_a = await criar_loja(client)
     loja_b = await criar_loja(client)
-    await seguir(client, cliente["id"], loja_a["id"])
-    await seguir(client, cliente["id"], loja_b["id"])
+    await seguir(client, cliente, loja_a["id"])
+    await seguir(client, cliente, loja_b["id"])
     for i in range(quantidade):
-        await publicar(client, (loja_a if i % 2 else loja_b)["id"], f"N{i}")
-    return cliente["id"]
+        await publicar(client, loja_a if i % 2 else loja_b, f"N{i}")
+    return cliente
 
 
 async def test_feed_limite_padrao_e_20(client):
-    cliente_id = await _cenario_com_novidades(client, 25)
+    cliente = await _cenario_com_novidades(client, 25)
 
-    textos = await _textos(client, cliente_id)
+    textos = await _textos(client, cliente)
 
     assert textos == [f"N{i}" for i in range(24, 4, -1)]
 
 
 async def test_feed_respeita_limite_informado(client):
-    cliente_id = await _cenario_com_novidades(client, 10)
+    cliente = await _cenario_com_novidades(client, 10)
 
-    assert await _textos(client, cliente_id, limite=3) == ["N9", "N8", "N7"]
+    assert await _textos(client, cliente, limite=3) == ["N9", "N8", "N7"]
 
 
 async def test_feed_aceita_limite_maximo_50(client):
-    cliente_id = await _cenario_com_novidades(client, 55)
+    cliente = await _cenario_com_novidades(client, 55)
 
-    assert len(await _textos(client, cliente_id, limite=50)) == 50
+    assert len(await _textos(client, cliente, limite=50)) == 50
 
 
 @pytest.mark.parametrize("limite", [0, -1, 51, "abc"])
 async def test_feed_limite_invalido_retorna_422(client, limite):
     cliente = await criar_cliente(client)
 
-    resp = await client.get(f"/clientes/{cliente['id']}/feed", params={"limite": limite})
+    resp = await client.get(
+        f"/clientes/{cliente['id']}/feed", params={"limite": limite}, headers=auth(cliente)
+    )
 
     erro = assert_erro(resp, 422, "entrada_invalida")
     assert erro["detalhes"][0]["campo"] == "limite"
 
 
-async def test_feed_de_cliente_inexistente_retorna_404(client):
-    resp = await client.get("/clientes/999/feed")
+async def test_feed_de_outro_cliente_retorna_403(client):
+    ana = await criar_cliente(client)
+    bia = await criar_cliente(client)
 
-    assert_erro(resp, 404, "cliente_nao_encontrado")
+    resp = await client.get(f"/clientes/{bia['id']}/feed", headers=auth(ana))
+
+    assert_erro(resp, 403, "acesso_negado")
 
 
-async def _pagina(client, cliente_id: int, **params) -> dict:
-    resp = await client.get(f"/clientes/{cliente_id}/feed", params=params)
+async def _pagina(client, cliente: dict, **params) -> dict:
+    resp = await client.get(f"/clientes/{cliente['id']}/feed", params=params, headers=auth(cliente))
     assert resp.status_code == 200, resp.text
     return resp.json()
 
 
 async def test_feed_sem_proxima_pagina_tem_cursor_nulo(client):
-    cliente_id = await _cenario_com_novidades(client, 3)
+    cliente = await _cenario_com_novidades(client, 3)
 
-    pagina = await _pagina(client, cliente_id, limite=3)
+    pagina = await _pagina(client, cliente, limite=3)
 
     assert len(pagina["itens"]) == 3
     assert pagina["proximo_cursor"] is None
 
 
 async def test_feed_pagina_por_cursor_sem_repetir_nem_pular(client):
-    cliente_id = await _cenario_com_novidades(client, 25)
+    cliente = await _cenario_com_novidades(client, 25)
 
     vistos, cursor, paginas = [], None, 0
     while True:
         params = {"limite": 10} | ({"cursor": cursor} if cursor else {})
-        pagina = await _pagina(client, cliente_id, **params)
+        pagina = await _pagina(client, cliente, **params)
         vistos += [item["texto"] for item in pagina["itens"]]
         paginas += 1
         cursor = pagina["proximo_cursor"]
@@ -187,13 +192,14 @@ async def test_feed_pagina_por_cursor_sem_repetir_nem_pular(client):
 
 
 async def test_feed_cursor_e_estavel_com_publicacao_entre_paginas(client):
-    cliente_id = await _cenario_com_novidades(client, 4)
-    primeira = await _pagina(client, cliente_id, limite=2)
+    cliente = await _cenario_com_novidades(client, 4)
+    primeira = await _pagina(client, cliente, limite=2)
 
     # Algo novo chega enquanto o cliente rola: não deve aparecer nem deslocar a página 2.
-    loja_id = primeira["itens"][0]["loja"]["id"]
-    await publicar(client, loja_id, "nova")
-    segunda = await _pagina(client, cliente_id, limite=2, cursor=primeira["proximo_cursor"])
+    loja_nova = await criar_loja(client)
+    await seguir(client, cliente, loja_nova["id"])
+    await publicar(client, loja_nova, "nova")
+    segunda = await _pagina(client, cliente, limite=2, cursor=primeira["proximo_cursor"])
 
     assert [i["texto"] for i in primeira["itens"]] == ["N3", "N2"]
     assert [i["texto"] for i in segunda["itens"]] == ["N1", "N0"]
@@ -202,7 +208,7 @@ async def test_feed_cursor_e_estavel_com_publicacao_entre_paginas(client):
 async def test_feed_cursor_desempata_pelo_id(client, engine):
     cliente = await criar_cliente(client)
     loja = await criar_loja(client)
-    await seguir(client, cliente["id"], loja["id"])
+    await seguir(client, cliente, loja["id"])
     async with engine.begin() as conn:
         await conn.execute(
             text(
@@ -213,8 +219,8 @@ async def test_feed_cursor_desempata_pelo_id(client, engine):
             {"loja": loja["id"]},
         )
 
-    primeira = await _pagina(client, cliente["id"], limite=3)
-    segunda = await _pagina(client, cliente["id"], limite=3, cursor=primeira["proximo_cursor"])
+    primeira = await _pagina(client, cliente, limite=3)
+    segunda = await _pagina(client, cliente, limite=3, cursor=primeira["proximo_cursor"])
 
     ids = [i["id"] for i in primeira["itens"] + segunda["itens"]]
     assert ids == [5, 4, 3, 2, 1]
@@ -233,7 +239,9 @@ async def test_feed_cursor_desempata_pelo_id(client, engine):
 async def test_feed_cursor_invalido_retorna_422(client, cursor):
     cliente = await criar_cliente(client)
 
-    resp = await client.get(f"/clientes/{cliente['id']}/feed", params={"cursor": cursor})
+    resp = await client.get(
+        f"/clientes/{cliente['id']}/feed", params={"cursor": cursor}, headers=auth(cliente)
+    )
 
     erro = assert_erro(resp, 422, "entrada_invalida")
     assert erro["detalhes"] == [{"campo": "cursor", "mensagem": "Cursor inválido."}]

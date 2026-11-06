@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -15,6 +16,20 @@ class Settings(BaseSettings):
     # Teto de tempo por query no Postgres: protege contra requisições caras (ex.: feed de
     # quem segue milhares de lojas) segurando conexões indefinidamente.
     db_statement_timeout_ms: int = 5000
+
+    # Autenticação (OAuth2 password flow + JWT). Sem JWT_SECRET definido, uma chave
+    # aleatória é gerada a cada start: serve para desenvolvimento, mas invalida os
+    # tokens ao reiniciar e não funciona com várias instâncias. Ver docs/adr/0007.
+    # HS256 pede chave de pelo menos 32 bytes (RFC 7518, seção 3.2).
+    jwt_secret: str | None = Field(default=None, min_length=32)
+    jwt_algoritmo: str = "HS256"
+    jwt_expira_minutos: int = 30
+
+    @field_validator("jwt_secret", mode="before")
+    @classmethod
+    def _vazio_e_none(cls, valor: str | None) -> str | None:
+        # docker compose passa "" quando a variável não existe no host.
+        return valor or None
 
 
 @lru_cache

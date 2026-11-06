@@ -13,11 +13,14 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from httpx import ASGITransport, AsyncClient
+from pwdlib import PasswordHash
+from pwdlib.hashers.argon2 import Argon2Hasher
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
+from app.core import security
 from app.core.config import get_settings
 from app.core.db import get_session
 from app.main import app
@@ -47,6 +50,13 @@ def banco_de_teste() -> None:
     cfg.attributes["configure_logger"] = False
     command.downgrade(cfg, "base")
     command.upgrade(cfg, "head")
+
+
+@pytest.fixture(autouse=True)
+def hash_de_senha_rapido(monkeypatch) -> None:
+    # Argon2 com custo mínimo: o algoritmo é o mesmo, mas cada hash leva ~1ms em vez de ~50ms.
+    rapido = PasswordHash((Argon2Hasher(time_cost=1, memory_cost=1024, parallelism=1),))
+    monkeypatch.setattr(security, "hasher", rapido)
 
 
 @pytest.fixture

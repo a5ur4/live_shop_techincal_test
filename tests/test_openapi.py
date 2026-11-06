@@ -7,6 +7,8 @@ from app.core.errors import CATALOGO_ERROS
 from app.main import app
 
 ROTAS_ESPERADAS = {
+    ("post", "/auth/clientes/token"),
+    ("post", "/auth/lojas/token"),
     ("post", "/lojas"),
     ("post", "/lojas/{loja_id}/novidades"),
     ("post", "/clientes"),
@@ -34,6 +36,30 @@ def test_todas_as_rotas_documentadas_com_erro_no_formato_padrao():
                 if status_code.startswith(("4", "5")):
                     schema = resposta["content"]["application/json"]["schema"]
                     assert schema["$ref"].endswith("/ErroResponse"), (metodo, path, status_code)
+
+
+ROTAS_PROTEGIDAS = {
+    ("post", "/lojas/{loja_id}/novidades"): "Lojista",
+    ("post", "/clientes/{cliente_id}/seguindo/{loja_id}"): "Cliente",
+    ("delete", "/clientes/{cliente_id}/seguindo/{loja_id}"): "Cliente",
+    ("get", "/clientes/{cliente_id}/feed"): "Cliente",
+}
+
+
+def test_rotas_protegidas_declaram_esquema_oauth2():
+    spec = app.openapi()
+    esquemas = spec["components"]["securitySchemes"]
+    assert esquemas["Cliente"]["flows"]["password"]["tokenUrl"] == "/auth/clientes/token"
+    assert esquemas["Lojista"]["flows"]["password"]["tokenUrl"] == "/auth/lojas/token"
+
+    for (metodo, path), esquema in ROTAS_PROTEGIDAS.items():
+        op = spec["paths"][path][metodo]
+        assert op.get("security") == [{esquema: []}], (metodo, path)
+        assert {"401", "403"} <= set(op["responses"]), (metodo, path)
+
+    publicas = ROTAS_ESPERADAS - set(ROTAS_PROTEGIDAS)
+    for metodo, path in publicas:
+        assert "security" not in spec["paths"][path][metodo], (metodo, path)
 
 
 def test_todo_codigo_de_erro_usado_no_codigo_esta_no_catalogo():
