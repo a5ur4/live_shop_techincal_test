@@ -35,7 +35,14 @@ async def montar_feed(
     # Busca um item a mais para saber se existe próxima página.
     busca = limite + 1
     ultimas_da_loja = (
-        select(Novidade.id, Novidade.loja_id, Novidade.texto, Novidade.preco, Novidade.criado_em)
+        select(
+            Novidade.id,
+            Novidade.loja_id,
+            Novidade.texto,
+            Novidade.preco,
+            Novidade.criado_em,
+            Novidade.editado_em,
+        )
         .where(Novidade.loja_id == Seguidor.loja_id)
         .order_by(Novidade.criado_em.desc(), Novidade.id.desc())
         .limit(busca)
@@ -48,7 +55,9 @@ async def montar_feed(
 
     n = ultimas_da_loja.c
     stmt = (
-        select(n.id, n.texto, n.preco, n.criado_em, Loja.id.label("loja_id"), Loja.nome)
+        select(
+            n.id, n.texto, n.preco, n.criado_em, n.editado_em, Loja.id.label("loja_id"), Loja.nome
+        )
         .select_from(Seguidor)
         .join(ultimas_da_loja, true())
         .join(Loja, Loja.id == Seguidor.loja_id)
@@ -67,6 +76,7 @@ async def montar_feed(
             texto=row.texto,
             preco=row.preco,
             criado_em=row.criado_em,
+            editado_em=row.editado_em,
         )
         for row in linhas
     ]

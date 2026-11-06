@@ -206,6 +206,7 @@ CATALOGO_ERROS: dict[str, tuple[int, str]] = {
     "cliente_nao_encontrado": (404, "Cliente 42 não encontrado."),
     "loja_nao_encontrada": (404, "Loja 7 não encontrada."),
     "nao_segue_loja": (404, "Cliente 42 não segue a loja 7."),
+    "novidade_nao_encontrada": (404, "Novidade 15 não encontrada na loja 7."),
     "email_ja_cadastrado": (409, "Já existe um cadastro com o e-mail ana@example.com."),
     "ja_segue_loja": (409, "Cliente 42 já segue a loja 7."),
     "entrada_invalida": (422, "Dados de entrada inválidos."),

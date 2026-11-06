@@ -10,8 +10,18 @@ from app.routes.deps import (
     RedisDep,
     SessionDep,
 )
-from app.schemas import ClienteCriar, ClienteOut, FeedOut, LojaSeguida, Pagina, SeguindoOut
+from app.schemas import (
+    ClienteCriar,
+    ClienteOut,
+    ContaEditar,
+    ExcluirContaIn,
+    FeedOut,
+    LojaSeguida,
+    Pagina,
+    SeguindoOut,
+)
 from app.services import clientes as service
+from app.services import contas as contas_service
 from app.services import feed as feed_service
 
 router = APIRouter(prefix="/clientes", tags=["Clientes"])
@@ -105,3 +115,38 @@ async def listar_seguindo(
     cursor: Cursor = None,
 ):
     return await service.listar_seguindo(session, cliente_id, limite, cursor)
+
+
+@router.patch(
+    "/{cliente_id}",
+    response_model=ClienteOut,
+    responses=respostas_erro(
+        "nao_autenticado",
+        "acesso_negado",
+        "cliente_nao_encontrado",
+        "email_ja_cadastrado",
+        "entrada_invalida",
+    ),
+    summary="Edita o cadastro do cliente (nome e/ou e-mail)",
+    description="Exige token do próprio cliente. Só os campos enviados mudam.",
+)
+async def editar_cliente(cliente_id: ClienteAutenticado, dados: ContaEditar, session: SessionDep):
+    return await contas_service.editar_conta(session, "cliente", cliente_id, dados)
+
+
+@router.delete(
+    "/{cliente_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses=respostas_erro(
+        "nao_autenticado", "acesso_negado", "cliente_nao_encontrado", "entrada_invalida"
+    ),
+    summary="Exclui a conta do cliente",
+    description=(
+        "Definitivo. Exige token do próprio cliente e a senha atual no corpo. "
+        "Apaga também as lojas seguidas."
+    ),
+)
+async def excluir_cliente(
+    cliente_id: ClienteAutenticado, dados: ExcluirContaIn, session: SessionDep, redis: RedisDep
+) -> None:
+    await contas_service.excluir_conta(session, redis, "cliente", cliente_id, dados.senha)

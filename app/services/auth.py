@@ -140,16 +140,21 @@ async def revogar_todos(session: AsyncSession, tipo: TipoConta, conta_id: int) -
     )
 
 
+def conferir_senha(conta: Cliente | Loja | None, senha: str, campo: str) -> None:
+    """Confirma a senha atual em operações sensíveis; errada vira 422 no `campo` informado."""
+    if conta is None or not verificar_senha(senha, conta.senha_hash):
+        raise EntradaInvalidaError(
+            "Dados de entrada inválidos.",
+            detalhes=[ErroDetalhe(campo=campo, mensagem="Senha atual incorreta.")],
+        )
+
+
 async def trocar_senha(
     session: AsyncSession, tipo: TipoConta, conta_id: int, senha_atual: str, nova_senha: str
 ) -> None:
     """Exige a senha atual (um access token roubado não basta) e encerra as outras sessões."""
     conta = await session.get(_MODELOS[tipo], conta_id)
-    if conta is None or not verificar_senha(senha_atual, conta.senha_hash):
-        raise EntradaInvalidaError(
-            "Dados de entrada inválidos.",
-            detalhes=[ErroDetalhe(campo="senha_atual", mensagem="Senha atual incorreta.")],
-        )
+    conferir_senha(conta, senha_atual, "senha_atual")
     conta.senha_hash = gerar_hash_senha(nova_senha)
     # Refresh tokens existentes deixam de valer; access tokens expiram sozinhos (curtos).
     await revogar_todos(session, tipo, conta_id)

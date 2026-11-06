@@ -14,6 +14,7 @@ RedisDep = Annotated[ResilientRedis, Depends(get_redis)]
 
 ClienteId = Annotated[int, Path(description="Id do cliente.", examples=[1])]
 LojaId = Annotated[int, Path(description="Id da loja.", examples=[1])]
+NovidadeId = Annotated[int, Path(description="Id da novidade.", examples=[1])]
 
 # Paginação comum a todas as listas (ver docs/adr/0006).
 LIMITE_PADRAO = 20

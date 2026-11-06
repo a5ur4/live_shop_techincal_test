@@ -7,6 +7,8 @@ cliente do app não precisa conhecer nem enviar o próprio id.
 from fastapi import APIRouter, Response, status
 
 from app.core.errors import respostas_erro
+from app.core.security import TipoConta
+from app.models import Cliente, Loja
 from app.routes.deps import (
     LIMITE_PADRAO,
     ClienteAtual,
@@ -15,14 +17,18 @@ from app.routes.deps import (
     Limite,
     LojaAtual,
     LojaId,
+    NovidadeId,
     RedisDep,
     SessionDep,
 )
 from app.schemas import (
+    ContaEditar,
     ContaOut,
+    ExcluirContaIn,
     FeedOut,
     LojaSeguida,
     NovidadeCriar,
+    NovidadeEditar,
     NovidadeOut,
     Pagina,
     SeguindoOut,
@@ -30,6 +36,7 @@ from app.schemas import (
 )
 from app.services import auth as auth_service
 from app.services import clientes as clientes_service
+from app.services import contas as contas_service
 from app.services import feed as feed_service
 from app.services import lojas as lojas_service
 
@@ -46,12 +53,48 @@ _SO_LOJA = "Exige token de **lojista**; token de cliente recebe 403."
     summary="Perfil da conta logada (cliente ou lojista)",
 )
 async def perfil(conta: ContaAtual, session: SessionDep):
-    if conta.tipo == "cliente":
-        registro = await clientes_service.obter_cliente(session, conta.id)
-    else:
-        registro = await lojas_service.obter_loja(session, conta.id)
+    return _conta_out(conta.tipo, await contas_service.obter_conta(session, conta.tipo, conta.id))
+
+
+@router.patch(
+    "",
+    response_model=ContaOut,
+    responses=respostas_erro(
+        "nao_autenticado",
+        "cliente_nao_encontrado",
+        "loja_nao_encontrada",
+        "email_ja_cadastrado",
+        "entrada_invalida",
+    ),
+    summary="Edito meu perfil (nome e/ou e-mail)",
+    description="Só os campos enviados mudam. Trocar o e-mail troca o login.",
+)
+async def editar_perfil(conta: ContaAtual, dados: ContaEditar, session: SessionDep):
+    registro = await contas_service.editar_conta(session, conta.tipo, conta.id, dados)
+    return _conta_out(conta.tipo, registro)
+
+
+@router.delete(
+    "",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses=respostas_erro(
+        "nao_autenticado", "cliente_nao_encontrado", "loja_nao_encontrada", "entrada_invalida"
+    ),
+    summary="Excluo minha conta",
+    description=(
+        "Definitivo. Exige a senha atual no corpo. Apaga as lojas seguidas (cliente) ou as "
+        "novidades e os seguidores (lojista) e encerra todas as sessões."
+    ),
+)
+async def excluir_conta(
+    conta: ContaAtual, dados: ExcluirContaIn, session: SessionDep, redis: RedisDep
+) -> None:
+    await contas_service.excluir_conta(session, redis, conta.tipo, conta.id, dados.senha)
+
+
+def _conta_out(tipo: TipoConta, registro: Cliente | Loja) -> ContaOut:
     return ContaOut(
-        tipo=conta.tipo,
+        tipo=tipo,
         id=registro.id,
         nome=registro.nome,
         email=registro.email,
@@ -174,3 +217,33 @@ async def minhas_novidades(
     cursor: Cursor = None,
 ):
     return await lojas_service.listar_novidades(session, loja_id, limite, cursor)
+
+
+@router.patch(
+    "/novidades/{novidade_id}",
+    response_model=NovidadeOut,
+    responses=respostas_erro(
+        "nao_autenticado", "acesso_negado", "novidade_nao_encontrada", "entrada_invalida"
+    ),
+    summary="Edito uma novidade da minha loja",
+    description=_SO_LOJA + " Só os campos enviados mudam; `preco: null` remove o preço.",
+)
+async def editar_novidade(
+    loja_id: LojaAtual, novidade_id: NovidadeId, dados: NovidadeEditar, session: SessionDep
+):
+    return await lojas_service.editar_novidade(session, loja_id, novidade_id, dados)
+
+
+@router.delete(
+    "/novidades/{novidade_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses=respostas_erro(
+        "nao_autenticado", "acesso_negado", "novidade_nao_encontrada", "entrada_invalida"
+    ),
+    summary="Removo uma novidade da minha loja",
+    description=_SO_LOJA,
+)
+async def remover_novidade(
+    loja_id: LojaAtual, novidade_id: NovidadeId, session: SessionDep
+) -> None:
+    await lojas_service.remover_novidade(session, loja_id, novidade_id)
