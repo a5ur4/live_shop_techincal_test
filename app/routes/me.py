@@ -25,7 +25,9 @@ from app.schemas import (
     NovidadeOut,
     Pagina,
     SeguindoOut,
+    TrocaSenhaIn,
 )
+from app.services import auth as auth_service
 from app.services import clientes as clientes_service
 from app.services import feed as feed_service
 from app.services import lojas as lojas_service
@@ -53,6 +55,22 @@ async def perfil(conta: ContaAtual, session: SessionDep):
         nome=registro.nome,
         email=registro.email,
         criado_em=registro.criado_em,
+    )
+
+
+@router.put(
+    "/senha",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses=respostas_erro("nao_autenticado", "entrada_invalida"),
+    summary="Troca a minha senha",
+    description=(
+        "Exige a senha atual. Encerra todas as sessões (refresh tokens) da conta; "
+        "access tokens já emitidos valem até expirar."
+    ),
+)
+async def trocar_senha(conta: ContaAtual, dados: TrocaSenhaIn, session: SessionDep) -> None:
+    await auth_service.trocar_senha(
+        session, conta.tipo, conta.id, dados.senha_atual, dados.nova_senha
     )
 
 

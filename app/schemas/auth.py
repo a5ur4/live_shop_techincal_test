@@ -1,7 +1,9 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+from app.schemas.base import Entrada, Senha
 
 
 class TokenOut(BaseModel):
@@ -9,7 +11,18 @@ class TokenOut(BaseModel):
 
     access_token: str
     token_type: Literal["bearer"] = "bearer"
-    expires_in: int
+    expires_in: int = Field(description="Validade do access token, em segundos.")
+    refresh_token: str = Field(description="Use em POST /auth/refresh quando o access expirar.")
+    refresh_expires_in: int = Field(description="Validade do refresh token, em segundos.")
+
+
+class RefreshIn(Entrada):
+    refresh_token: str = Field(min_length=1, max_length=200)
+
+
+class TrocaSenhaIn(Entrada):
+    senha_atual: str = Field(min_length=1, max_length=128)
+    nova_senha: Senha
 
 
 class ContaOut(BaseModel):

@@ -1,6 +1,6 @@
 """Contratos de entrada e saída da API (Pydantic). Um módulo por recurso."""
 
-from app.schemas.auth import ContaOut, TokenOut
+from app.schemas.auth import ContaOut, RefreshIn, TokenOut, TrocaSenhaIn
 from app.schemas.base import Pagina
 from app.schemas.cliente import ClienteCriar, ClienteOut, LojaSeguida, SeguindoOut
 from app.schemas.feed import FeedItem, FeedOut, LojaResumo
@@ -22,6 +22,8 @@ __all__ = [
     "NovidadeCriar",
     "NovidadeOut",
     "Pagina",
+    "RefreshIn",
     "SeguindoOut",
     "TokenOut",
+    "TrocaSenhaIn",
 ]

@@ -8,6 +8,7 @@ from app.models.base import EMAIL_MAX, NOME_MAX, Base
 from app.models.cliente import Cliente
 from app.models.loja import Loja
 from app.models.novidade import TEXTO_MAX, Novidade
+from app.models.refresh_token import RefreshToken
 from app.models.seguidor import Seguidor
 
 __all__ = [
@@ -18,5 +19,6 @@ __all__ = [
     "Cliente",
     "Loja",
     "Novidade",
+    "RefreshToken",
     "Seguidor",
 ]

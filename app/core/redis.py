@@ -1,7 +1,7 @@
 """Cliente Redis usado como cache do feed e contador do rate limit (ver docs/adr/0008).
 
 O Redis é **acessório**: se estiver fora do ar, a API continua funcionando (o cache é
-ignorado e o rate limit deixa passar), só registra um aviso. Por isso os timeouts são
+ignorado e o rate limit usa contadores em memória), só registra um aviso. Por isso os timeouts são
 curtos e todo acesso passa por `ResilientRedis`, que nunca propaga erro de conexão.
 """
 

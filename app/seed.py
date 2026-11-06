@@ -59,7 +59,10 @@ async def seed(reset: bool) -> None:
     async with SessionLocal() as session:
         if reset:
             await session.execute(
-                text("TRUNCATE novidades, seguidores, clientes, lojas RESTART IDENTITY CASCADE")
+                text(
+                    "TRUNCATE novidades, seguidores, clientes, lojas, refresh_tokens "
+                    "RESTART IDENTITY CASCADE"
+                )
             )
         elif await session.scalar(select(func.count()).select_from(Loja)):
             print("Banco já tem dados; nada feito. Use --reset para recriar.")

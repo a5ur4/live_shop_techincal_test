@@ -67,7 +67,10 @@ async def engine() -> AsyncIterator[AsyncEngine]:
     eng = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool)
     async with eng.begin() as conn:
         await conn.execute(
-            text("TRUNCATE novidades, seguidores, clientes, lojas RESTART IDENTITY CASCADE")
+            text(
+                "TRUNCATE novidades, seguidores, clientes, lojas, refresh_tokens "
+                "RESTART IDENTITY CASCADE"
+            )
         )
     yield eng
     await eng.dispose()

@@ -87,6 +87,19 @@ class ConflitoError(AppError):
     codigo = "conflito"
 
 
+class MuitasTentativasError(AppError):
+    """429: rate limit do login. `Retry-After` diz em quantos segundos tentar de novo."""
+
+    status_code = status.HTTP_429_TOO_MANY_REQUESTS
+    codigo = "muitas_tentativas"
+
+    def __init__(self, retry_after: int) -> None:
+        super().__init__(
+            "Muitas tentativas de login. Tente novamente mais tarde.",
+            headers={"Retry-After": str(retry_after)},
+        )
+
+
 class EntradaInvalidaError(AppError):
     status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
     codigo = "entrada_invalida"
@@ -188,6 +201,7 @@ def register_error_handlers(app: FastAPI) -> None:
 CATALOGO_ERROS: dict[str, tuple[int, str]] = {
     "nao_autenticado": (401, "Token ausente, inválido ou expirado."),
     "credenciais_invalidas": (401, "E-mail ou senha incorretos."),
+    "refresh_invalido": (401, "Refresh token inválido, expirado ou revogado."),
     "acesso_negado": (403, "Este token não dá acesso a este cliente."),
     "cliente_nao_encontrado": (404, "Cliente 42 não encontrado."),
     "loja_nao_encontrada": (404, "Loja 7 não encontrada."),
@@ -195,6 +209,7 @@ CATALOGO_ERROS: dict[str, tuple[int, str]] = {
     "email_ja_cadastrado": (409, "Já existe um cadastro com o e-mail ana@example.com."),
     "ja_segue_loja": (409, "Cliente 42 já segue a loja 7."),
     "entrada_invalida": (422, "Dados de entrada inválidos."),
+    "muitas_tentativas": (429, "Muitas tentativas de login. Tente novamente mais tarde."),
     "banco_indisponivel": (503, "Banco de dados indisponível."),
 }
 
@@ -204,6 +219,7 @@ _DESCRICOES_STATUS = {
     404: "Recurso não encontrado",
     409: "Conflito com o estado atual",
     422: "Entrada inválida",
+    429: "Muitas requisições",
     503: "Serviço indisponível",
 }
 

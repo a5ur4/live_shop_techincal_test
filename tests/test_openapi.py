@@ -9,6 +9,9 @@ from app.main import app
 ROTAS_ESPERADAS = {
     ("post", "/auth/clientes/token"),
     ("post", "/auth/lojas/token"),
+    ("post", "/auth/refresh"),
+    ("post", "/auth/logout"),
+    ("put", "/me/senha"),
     ("post", "/lojas"),
     ("get", "/lojas"),
     ("get", "/lojas/{loja_id}"),
@@ -51,6 +54,7 @@ def test_todas_as_rotas_documentadas_com_erro_no_formato_padrao():
 
 ROTAS_PROTEGIDAS = {
     ("get", "/me"): ["Cliente", "Lojista"],  # qualquer um dos dois
+    ("put", "/me/senha"): ["Cliente", "Lojista"],
     ("get", "/me/feed"): "Cliente",
     ("get", "/me/seguindo"): "Cliente",
     ("post", "/me/seguindo/{loja_id}"): "Cliente",
