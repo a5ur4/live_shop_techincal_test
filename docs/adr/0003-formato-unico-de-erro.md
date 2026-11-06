@@ -40,7 +40,7 @@ Códigos usados hoje:
 | --- | --- |
 | 401 | `nao_autenticado` (com `WWW-Authenticate: Bearer`), `credenciais_invalidas`, `refresh_invalido` |
 | 403 | `acesso_negado` |
-| 404 | `cliente_nao_encontrado`, `loja_nao_encontrada`, `nao_segue_loja`, `rota_nao_encontrada` |
+| 404 | `cliente_nao_encontrado`, `loja_nao_encontrada`, `novidade_nao_encontrada`, `nao_segue_loja`, `rota_nao_encontrada` |
 | 405 | `metodo_nao_permitido` |
 | 409 | `email_ja_cadastrado`, `ja_segue_loja` |
 | 422 | `entrada_invalida` |

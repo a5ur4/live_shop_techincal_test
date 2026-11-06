@@ -53,6 +53,7 @@ POST {{base}}/clientes/{{clienteId}}/seguindo/{{lojaId}}
 Authorization: Bearer {{tokenCliente}}
 
 ### Loja publica novidade com preço
+# @name novidade
 POST {{base}}/lojas/{{lojaId}}/novidades
 Authorization: Bearer {{tokenLoja}}
 Content-Type: application/json
@@ -126,6 +127,56 @@ GET {{base}}/lojas/{{lojaId}}/novidades?limite=10
 ### Lojas que o cliente segue
 GET {{base}}/clientes/{{clienteId}}/seguindo
 Authorization: Bearer {{tokenCliente}}
+
+### --- Edição e exclusão ---
+
+@novidadeId = {{novidade.response.body.id}}
+
+### Lojista edita a novidade (só os campos enviados mudam; criado_em fica, editado_em é preenchido)
+PATCH {{base}}/lojas/{{lojaId}}/novidades/{{novidadeId}}
+Authorization: Bearer {{tokenLoja}}
+Content-Type: application/json
+
+{"texto": "Coleção de verão com 20% off!", "preco": "159.90"}
+
+### O mesmo via /me; preco null remove o preço
+PATCH {{base}}/me/novidades/{{novidadeId}}
+Authorization: Bearer {{tokenLoja}}
+Content-Type: application/json
+
+{"preco": null}
+
+### Lojista remove a novidade (204; de novo → 404 novidade_nao_encontrada)
+DELETE {{base}}/me/novidades/{{novidadeId}}
+Authorization: Bearer {{tokenLoja}}
+
+### Edita o perfil da conta logada (nome e/ou e-mail; e-mail é o login)
+PATCH {{base}}/me
+Authorization: Bearer {{tokenCliente}}
+Content-Type: application/json
+
+{"nome": "João da Silva"}
+
+### O mesmo pela rota com id (loja: PATCH /lojas/{id})
+PATCH {{base}}/clientes/{{clienteId}}
+Authorization: Bearer {{tokenCliente}}
+Content-Type: application/json
+
+{"nome": "João S."}
+
+### 422: excluir com a senha errada (campo senha)
+DELETE {{base}}/me
+Authorization: Bearer {{tokenCliente}}
+Content-Type: application/json
+
+{"senha": "errada"}
+
+### Exclui a conta (definitivo; rode por último). Loja: DELETE /lojas/{id} apaga novidades e seguidores
+DELETE {{base}}/clientes/{{clienteId}}
+Authorization: Bearer {{tokenCliente}}
+Content-Type: application/json
+
+{"senha": "senha-forte-123"}
 
 ### --- Erros (todos no mesmo formato) ---
 

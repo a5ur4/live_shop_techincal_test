@@ -67,6 +67,15 @@ direto; services **não** importam FastAPI (exceto via `app.core.errors`).
   funcionar com o Redis fora. Nada que seja fonte da verdade vai para o Redis.
 - **Cache do feed**: qualquer mudança que altere *quais lojas* o cliente segue precisa
   chamar `cache_feed.invalidar(redis, cliente_id)` **depois** do commit.
+- **Edição (`PATCH`)**: corpo herda de `Edicao` (`app/schemas/base.py`); aplique só
+  `model_dump(exclude_unset=True)`. Campo que não aceita `null` é declarado `Tipo = None`.
+  Recurso de outra conta que o id não revela (novidade de outra loja) → 404, não 403.
+- **Exclusão de conta** (`services/contas.py`): confirma a senha, apaga refresh tokens à mão
+  (sem FK) e confia no `ON DELETE CASCADE` do resto. Tabela nova ligada a cliente/loja precisa
+  de `ondelete="CASCADE"` ou de limpeza explícita em `excluir_conta`.
+- **Front** (`app/front`, servido em `/app` por `app/routes/front.py`): HTML/JS puro, sem
+  build. Dados da API só via `textContent` (função `h`), nunca `innerHTML`; a CSP de `/app`
+  bloqueia script/estilo inline. Mudou contrato da API → ajuste `app/front/app.js`.
 - **Segredos**: senha só entra como hash (`gerar_hash_senha`) e nunca sai em resposta.
   `JWT_SECRET` vem do ambiente; nunca escreva chave real em código, teste ou `.env.example`.
 - **Unicidade**: use `insert(...).on_conflict_do_nothing(...).returning(...)` e trate `None`

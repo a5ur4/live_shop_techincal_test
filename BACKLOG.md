@@ -71,6 +71,15 @@ Marque `[x]` ao concluir e mantenha a ordem: **obrigatório antes de diferencial
 - [x] Benchmark com loja de 100 mil seguidores (`make benchmark`) — ADR 0008
 - [x] Pull Request `feat/me-leitura-escala` → `main` ([#2](https://github.com/a5ur4/live_shop_techincal_test/pull/2))
 
+## 7. Terceira etapa (branch `feat/edicao-exclusao-front`)
+
+- [x] Editar/remover novidade (`PATCH`/`DELETE /lojas/{id}/novidades/{nid}` e `/me/novidades/{nid}`),
+      com `editado_em` (migration) — ADR 0009
+- [x] Editar perfil (`PATCH /me`, `/lojas/{id}`, `/clientes/{id}`)
+- [x] Excluir conta com confirmação por senha (`DELETE /me`, `/lojas/{id}`, `/clientes/{id}`)
+- [x] Front de teste em `/app` (HTML + JS, sem build) — ADR 0009
+- [ ] Pull Request `feat/edicao-exclusao-front` → `main`
+
 ## Ideias futuras (fora do escopo)
 
 - Feed híbrido (fan-out na escrita para lojas pequenas) se o feed sem cache ficar lento
