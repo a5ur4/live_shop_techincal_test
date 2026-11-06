@@ -60,3 +60,20 @@ class SeguindoOut(_Saida):
     cliente_id: int
     loja_id: int
     criado_em: datetime
+
+
+# --- Novidades ---------------------------------------------------------------
+
+
+class NovidadeCriar(_Entrada):
+    texto: Texto = Field(examples=["Chegou a coleção de verão!"])
+    preco: Preco | None = Field(default=None, examples=["199.90"])
+
+
+class NovidadeOut(_Saida):
+    id: int
+    loja_id: int
+    texto: str
+    # Serializado como string ("199.90") para não perder precisão em JSON.
+    preco: Decimal | None
+    criado_em: datetime
