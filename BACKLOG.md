@@ -58,9 +58,24 @@ Marque `[x]` ao concluir e mantenha a ordem: **obrigatório antes de diferencial
 - [x] Reorganização em `app/routes/`, `app/models/` e `app/schemas/` (um arquivo por entidade)
 - [x] Autenticação OAuth2 (password flow) + JWT para clientes e lojistas — ADR 0007
 
+## 6. Segunda etapa (branch `feat/me-leitura-escala`)
+
+- [x] Leitura: `GET /lojas` (busca e cursor), `GET /lojas/{id}`, `GET /lojas/{id}/novidades`,
+      `GET /clientes/{id}/seguindo`
+- [x] Rotas `/me` (perfil, feed, seguindo, novidades) pelo tipo do token
+- [x] Redis no compose e no CI
+- [x] Refresh token com rotação e detecção de reuso, logout — ADR 0007
+- [x] Rate limit no login (Redis, fallback em memória) — ADR 0008
+- [x] Troca de senha (`PUT /me/senha`) encerrando as sessões
+- [x] Cache da primeira página do feed (Redis, TTL 30s) — ADR 0008
+- [x] Benchmark com loja de 100 mil seguidores (`make benchmark`) — ADR 0008
+- [ ] Pull Request `feat/me-leitura-escala` → `main`
+
 ## Ideias futuras (fora do escopo)
 
-- Refresh token, revogação e rotas `/me/...`
-- Rate limiting no login (proteção contra força bruta)
-- Feed híbrido (fan-out na escrita para lojas pequenas, na leitura para lojas grandes)
-- Cache do feed (Redis) para clientes muito ativos
+- Feed híbrido (fan-out na escrita para lojas pequenas) se o feed sem cache ficar lento
+- Invalidar cache dos seguidores de lojas pequenas ao publicar
+- Recuperação de senha por e-mail, MFA, listar/encerrar sessões ativas
+- Limpeza periódica de refresh tokens expirados
+- Contador desnormalizado de seguidores por loja
+- Teste de carga concorrente (k6/Locust) sobre a API em rede

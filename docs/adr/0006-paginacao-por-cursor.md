@@ -31,6 +31,13 @@ Paginação por **keyset** com cursor opaco:
 - **Cursor assinado (HMAC)**: impediria cursores forjados, mas um cursor forjado aqui só
   permite ler o próprio feed a partir de outro ponto — sem ganho de segurança real.
 
+## Outras listas
+
+O mesmo padrão vale para `GET /lojas/{id}/novidades` e `GET /clientes/{id}/seguindo`
+(posição `(criado_em, id)`) e para `GET /lojas` (posição `id`, ordem crescente). O codec
+fica em `app/core/paginacao.py`; ids do cursor fora de `1..2^63-1` dão 422 (senão estourariam
+o `BIGINT` no Postgres — apontado pela revisão de segurança).
+
 ## Consequências
 
 - Navegação só para frente (o caso de uso de um feed). Para "voltar ao topo", basta chamar

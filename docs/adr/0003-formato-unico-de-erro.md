@@ -38,12 +38,13 @@ Códigos usados hoje:
 
 | HTTP | codigo |
 | --- | --- |
-| 401 | `nao_autenticado` (com `WWW-Authenticate: Bearer`), `credenciais_invalidas` |
+| 401 | `nao_autenticado` (com `WWW-Authenticate: Bearer`), `credenciais_invalidas`, `refresh_invalido` |
 | 403 | `acesso_negado` |
 | 404 | `cliente_nao_encontrado`, `loja_nao_encontrada`, `nao_segue_loja`, `rota_nao_encontrada` |
 | 405 | `metodo_nao_permitido` |
 | 409 | `email_ja_cadastrado`, `ja_segue_loja` |
 | 422 | `entrada_invalida` |
+| 429 | `muitas_tentativas` (com `Retry-After`) |
 | 500 | `erro_interno` |
 | 503 | `banco_indisponivel` (`GET /health`) |
 

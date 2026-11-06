@@ -61,8 +61,9 @@ ordem total e estável (pré-requisito para paginação por cursor).
 ## Consequências
 
 - Cliente que segue muitas lojas (milhares) gera mais trabalho por leitura. Mitigações já
-  aplicadas: `limite` máximo 50 e `statement_timeout` de 5s nas conexões. Próximos passos se
-  necessário: limitar quantas lojas um cliente pode seguir, cache curto do feed por cliente
-  (Redis, invalidado na publicação), ou o modelo híbrido.
+  aplicadas: `limite` máximo 50, `statement_timeout` de 5s nas conexões e cache da primeira
+  página no Redis ([ADR 0008](0008-redis-cache-e-rate-limit.md), com benchmark: ~13 ms sem
+  cache e ~2 ms com cache para um cliente que segue ~500 lojas). Próximos passos se
+  necessário: limitar quantas lojas um cliente pode seguir ou o modelo híbrido.
 - Seguir uma loja mostra imediatamente as novidades antigas dela no feed (decisão de produto
   registrada no ADR 0004).
