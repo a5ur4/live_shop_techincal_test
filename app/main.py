@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
 from app.core.errors import register_error_handlers
-from app.routes import auth, clientes, health, lojas
+from app.routes import auth, clientes, health, lojas, me
 
 DESCRICAO = """
 Clientes seguem lojas e acompanham, num feed, as novidades que elas publicam.
@@ -15,6 +15,7 @@ OAuth2 *password flow* com JWT. Cadastros (`POST /lojas`, `POST /clientes`) são
 o login (`POST /auth/clientes/token` ou `POST /auth/lojas/token`) devolve um
 `access_token`, enviado como `Authorization: Bearer <token>`. As rotas mantêm o id na URL,
 e o token precisa ser do mesmo cliente/loja: caso contrário, `403 acesso_negado`.
+As rotas `/me/...` fazem o mesmo sem id na URL: a conta vem do token.
 No Swagger, use o botão **Authorize**.
 
 ### Erros
@@ -34,6 +35,7 @@ repita a chamada com `?cursor=<proximo_cursor>` para buscar a página seguinte.
 
 TAGS = [
     {"name": "Autenticação", "description": "Login (OAuth2 password flow) e emissão de JWT."},
+    {"name": "Minha conta", "description": "Rotas da conta logada: o id vem do token."},
     {"name": "Lojas", "description": "Cadastro de lojas e publicação de novidades."},
     {"name": "Clientes", "description": "Cadastro de clientes, lojas seguidas e feed."},
     {"name": "Saúde", "description": "Verificação de disponibilidade (API e banco)."},
@@ -49,6 +51,7 @@ def create_app() -> FastAPI:
     )
     register_error_handlers(app)
     app.include_router(auth.router)
+    app.include_router(me.router)
     app.include_router(lojas.router)
     app.include_router(clientes.router)
     app.include_router(health.router)

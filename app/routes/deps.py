@@ -67,3 +67,34 @@ async def _exigir_loja_dona(
 # Use no lugar de ClienteId/LojaId nas rotas protegidas: valida token e dono numa linha.
 ClienteAutenticado = Annotated[int, Depends(_exigir_cliente_dono)]
 LojaAutenticada = Annotated[int, Depends(_exigir_loja_dona)]
+
+
+# --- Rotas /me: a conta vem do token, não da URL ---------------------------------
+
+
+async def _cliente_atual(token: Annotated[str | None, Depends(_oauth2_cliente)]) -> int:
+    return _identidade(token, "cliente").id
+
+
+async def _loja_atual(token: Annotated[str | None, Depends(_oauth2_loja)]) -> int:
+    return _identidade(token, "loja").id
+
+
+async def _conta_atual(
+    token_cliente: Annotated[str | None, Depends(_oauth2_cliente)],
+    token_loja: Annotated[str | None, Depends(_oauth2_loja)],
+) -> Identidade:
+    # Os dois esquemas leem o mesmo header; declarar ambos faz o OpenAPI aceitar
+    # qualquer um deles (requisitos alternativos) nesta rota.
+    token = token_cliente or token_loja
+    if not token:
+        raise NaoAutenticadoError("Token de acesso ausente.")
+    identidade = ler_token(token)
+    if identidade is None:
+        raise NaoAutenticadoError("Token inválido ou expirado.")
+    return identidade
+
+
+ClienteAtual = Annotated[int, Depends(_cliente_atual)]
+LojaAtual = Annotated[int, Depends(_loja_atual)]
+ContaAtual = Annotated[Identidade, Depends(_conta_atual)]

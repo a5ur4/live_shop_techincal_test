@@ -79,6 +79,39 @@ Authorization: Bearer {{tokenCliente}}
 GET {{base}}/clientes/{{clienteId}}/feed?limite=1&cursor={{feed.response.body.proximo_cursor}}
 Authorization: Bearer {{tokenCliente}}
 
+### --- Minha conta (/me): o id vem do token ---
+
+### Perfil de quem está logado (cliente ou lojista)
+GET {{base}}/me
+Authorization: Bearer {{tokenCliente}}
+
+### Meu feed
+GET {{base}}/me/feed?limite=5
+Authorization: Bearer {{tokenCliente}}
+
+### Lojas que eu sigo
+GET {{base}}/me/seguindo
+Authorization: Bearer {{tokenCliente}}
+
+### Sigo / deixo de seguir uma loja
+POST {{base}}/me/seguindo/1
+Authorization: Bearer {{tokenCliente}}
+
+###
+DELETE {{base}}/me/seguindo/1
+Authorization: Bearer {{tokenCliente}}
+
+### Lojista publica na própria loja
+POST {{base}}/me/novidades
+Authorization: Bearer {{tokenLoja}}
+Content-Type: application/json
+
+{"texto": "Publicado via /me"}
+
+### Novidades da minha loja
+GET {{base}}/me/novidades
+Authorization: Bearer {{tokenLoja}}
+
 ### --- Leitura ---
 
 ### Lista lojas (público, paginado; q filtra por nome)
