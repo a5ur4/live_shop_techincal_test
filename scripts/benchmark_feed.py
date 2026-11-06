@@ -31,7 +31,7 @@ from app.main import app
 
 settings = get_settings()
 URL_BENCH = make_url(settings.database_url).set(database="feed_bench")
-REDIS_BENCH = "redis://localhost:6379/14"
+REDIS_BENCH = "redis://127.0.0.1:6379/14"
 
 CLIENTES = 100_000
 LOJAS_PEQUENAS = 2_000

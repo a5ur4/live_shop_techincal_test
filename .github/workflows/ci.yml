@@ -50,9 +50,9 @@ jobs:
           --health-timeout 3s
           --health-retries 20
     env:
-      DATABASE_URL: postgresql+asyncpg://feed:feed@localhost:5432/feed
-      TEST_DATABASE_URL: postgresql+asyncpg://feed:feed@localhost:5432/feed_test
-      TEST_REDIS_URL: redis://localhost:6379/15
+      DATABASE_URL: postgresql+asyncpg://feed:feed@127.0.0.1:5432/feed
+      TEST_DATABASE_URL: postgresql+asyncpg://feed:feed@127.0.0.1:5432/feed_test
+      TEST_REDIS_URL: redis://127.0.0.1:6379/15
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6

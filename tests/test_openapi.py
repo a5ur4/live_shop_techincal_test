@@ -119,7 +119,7 @@ def test_todo_codigo_de_erro_usado_no_codigo_esta_no_catalogo():
         "erro_http",
         "erro_interno",
     }
-    fonte = "\n".join(p.read_text() for p in Path("app").rglob("*.py"))
+    fonte = "\n".join(p.read_text(encoding="utf-8") for p in Path("app").rglob("*.py"))
     usados = set(re.findall(r'codigo\s*=\s*"([a-z_]+)"', fonte)) - genericos
 
     assert usados <= set(CATALOGO_ERROS), usados - set(CATALOGO_ERROS)
