@@ -26,7 +26,7 @@ class BancoIndisponivelError(AppError):
 @router.get(
     "/health",
     response_model=HealthOut,
-    responses=respostas_erro(503),
+    responses=respostas_erro("banco_indisponivel"),
     summary="Verifica se a API e o banco estão respondendo",
 )
 async def health(session: SessionDep):

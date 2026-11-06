@@ -156,12 +156,47 @@ def register_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(Exception, _unhandled_handler)
 
 
-# Respostas de erro para documentar no OpenAPI (usado nas rotas).
-def respostas_erro(*codigos: int) -> dict[int | str, dict[str, Any]]:
-    descricoes = {
-        404: "Recurso não encontrado",
-        409: "Conflito com o estado atual",
-        422: "Entrada inválida",
-        503: "Serviço indisponível",
-    }
-    return {c: {"model": ErroResponse, "description": descricoes.get(c, "Erro")} for c in codigos}
+# --- Documentação OpenAPI ---------------------------------------------------
+
+# Catálogo de erros: código -> (status HTTP, exemplo de mensagem). Alimenta os exemplos
+# do Swagger; ao criar um código novo, adicione aqui e na tabela do ADR 0003.
+CATALOGO_ERROS: dict[str, tuple[int, str]] = {
+    "cliente_nao_encontrado": (404, "Cliente 42 não encontrado."),
+    "loja_nao_encontrada": (404, "Loja 7 não encontrada."),
+    "nao_segue_loja": (404, "Cliente 42 não segue a loja 7."),
+    "email_ja_cadastrado": (409, "Já existe um cliente com o e-mail ana@example.com."),
+    "ja_segue_loja": (409, "Cliente 42 já segue a loja 7."),
+    "entrada_invalida": (422, "Dados de entrada inválidos."),
+    "banco_indisponivel": (503, "Banco de dados indisponível."),
+}
+
+_DESCRICOES_STATUS = {
+    404: "Recurso não encontrado",
+    409: "Conflito com o estado atual",
+    422: "Entrada inválida",
+    503: "Serviço indisponível",
+}
+
+
+def respostas_erro(*codigos: str) -> dict[int | str, dict[str, Any]]:
+    """Monta `responses=` de uma rota a partir dos códigos de erro que ela pode devolver."""
+    respostas: dict[int | str, dict[str, Any]] = {}
+    for codigo in codigos:
+        status_code, mensagem = CATALOGO_ERROS[codigo]
+        detalhes = (
+            [{"campo": "texto", "mensagem": "Deve ter pelo menos 1 caractere(s)."}]
+            if codigo == "entrada_invalida"
+            else []
+        )
+        resposta = respostas.setdefault(
+            status_code,
+            {
+                "model": ErroResponse,
+                "description": _DESCRICOES_STATUS.get(status_code, "Erro"),
+                "content": {"application/json": {"examples": {}}},
+            },
+        )
+        resposta["content"]["application/json"]["examples"][codigo] = {
+            "value": {"erro": {"codigo": codigo, "mensagem": mensagem, "detalhes": detalhes}}
+        }
+    return respostas

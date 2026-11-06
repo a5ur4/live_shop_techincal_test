@@ -1,0 +1,53 @@
+"""A documentação OpenAPI é parte do contrato: garante que ela acompanha o código."""
+
+import re
+from pathlib import Path
+
+from app.core.errors import CATALOGO_ERROS
+from app.main import app
+
+ROTAS_ESPERADAS = {
+    ("post", "/lojas"),
+    ("post", "/lojas/{loja_id}/novidades"),
+    ("post", "/clientes"),
+    ("post", "/clientes/{cliente_id}/seguindo/{loja_id}"),
+    ("delete", "/clientes/{cliente_id}/seguindo/{loja_id}"),
+    ("get", "/clientes/{cliente_id}/feed"),
+    ("get", "/health"),
+}
+
+
+async def test_swagger_e_openapi_disponiveis(client):
+    assert (await client.get("/docs")).status_code == 200
+    assert (await client.get("/openapi.json")).status_code == 200
+
+
+def test_todas_as_rotas_documentadas_com_erro_no_formato_padrao():
+    spec = app.openapi()
+    rotas = {(m, p) for p, ops in spec["paths"].items() for m in ops}
+    assert rotas == ROTAS_ESPERADAS
+
+    for path, ops in spec["paths"].items():
+        for metodo, op in ops.items():
+            assert op.get("summary"), f"{metodo} {path} sem summary"
+            for status_code, resposta in op["responses"].items():
+                if status_code.startswith(("4", "5")):
+                    schema = resposta["content"]["application/json"]["schema"]
+                    assert schema["$ref"].endswith("/ErroResponse"), (metodo, path, status_code)
+
+
+def test_todo_codigo_de_erro_usado_no_codigo_esta_no_catalogo():
+    # Códigos genéricos dos handlers globais (rota inexistente, 500...) não aparecem nas rotas.
+    genericos = {
+        "requisicao_invalida",
+        "nao_encontrado",
+        "conflito",
+        "rota_nao_encontrada",
+        "metodo_nao_permitido",
+        "erro_http",
+        "erro_interno",
+    }
+    fonte = "\n".join(p.read_text() for p in Path("app").rglob("*.py"))
+    usados = set(re.findall(r'codigo\s*=\s*"([a-z_]+)"', fonte)) - genericos
+
+    assert usados <= set(CATALOGO_ERROS), usados - set(CATALOGO_ERROS)
