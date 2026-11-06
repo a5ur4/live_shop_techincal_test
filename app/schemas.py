@@ -77,3 +77,23 @@ class NovidadeOut(_Saida):
     # Serializado como string ("199.90") para não perder precisão em JSON.
     preco: Decimal | None
     criado_em: datetime
+
+
+# --- Feed --------------------------------------------------------------------
+
+
+class LojaResumo(_Saida):
+    id: int
+    nome: str
+
+
+class FeedItem(_Saida):
+    id: int
+    loja: LojaResumo
+    texto: str
+    preco: Decimal | None
+    criado_em: datetime
+
+
+class FeedOut(BaseModel):
+    itens: list[FeedItem]
