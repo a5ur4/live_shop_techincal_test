@@ -15,6 +15,7 @@ class FeedItem(Saida):
     texto: str
     preco: Decimal | None
     criado_em: datetime
+    editado_em: datetime | None
 
 
 class FeedOut(Pagina[FeedItem]):

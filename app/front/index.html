@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Feed de Novidades</title>
+    <link rel="stylesheet" href="estilo.css" />
+    <script type="module" src="app.js"></script>
+  </head>
+  <body>
+    <header class="topo">
+      <div class="topo-conteudo">
+        <a class="marca" href="./">Feed de Novidades</a>
+        <div id="sessao" class="sessao"></div>
+      </div>
+    </header>
+
+    <main id="app" class="conteudo" aria-live="polite">
+      <p class="vazio">Carregando…</p>
+    </main>
+
+    <div id="avisos" class="avisos" role="status" aria-live="assertive"></div>
+
+    <footer class="rodape">
+      <details id="registro">
+        <summary>Chamadas à API <span id="registro-total" class="selo">0</span></summary>
+        <p class="dica">
+          Últimas requisições feitas por esta página (sem corpo nem tokens). A documentação
+          completa da API está em <a href="/docs">/docs</a>.
+        </p>
+        <div class="tabela-rolagem">
+          <table>
+            <thead>
+              <tr>
+                <th>Hora</th>
+                <th>Método</th>
+                <th>Caminho</th>
+                <th>Status</th>
+                <th>ms</th>
+                <th>X-Cache</th>
+              </tr>
+            </thead>
+            <tbody id="registro-linhas"></tbody>
+          </table>
+        </div>
+      </details>
+    </footer>
+  </body>
+</html>

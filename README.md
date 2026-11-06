@@ -20,6 +20,8 @@ cd live_shop_techincal_test
 docker compose up -d --build --wait            # Postgres + Redis + API; migrations e seed rodam sozinhos
 ```
 
+- **Front de teste: <http://localhost:8000/app/>** (a raiz `/` redireciona para lá) — entre
+  com uma conta do seed ou crie uma e use a API pela interface.
 - API: <http://localhost:8000> · Saúde: <http://localhost:8000/health>
 - Swagger (OpenAPI): <http://localhost:8000/docs> — use o botão **Authorize** para logar.
 
@@ -73,10 +75,22 @@ do zero + `alembic check`, testes com Postgres e Redis e build da imagem Docker.
 | `tests/test_sessao.py` | refresh com rotação, reuso derrubando a sessão (sem afetar outras), expirado, só hash no banco, logout idempotente, rate limit por e-mail/IP com `Retry-After`, fallback em memória sem Redis, troca de senha |
 | `tests/test_me.py` | perfil, feed, seguir/deixar e novidades pelo `/me`, equivalência com as rotas com `{id}`, tipo de conta errado (403) |
 | `tests/test_leitura.py` | `GET /lojas` (ordem, cursor, busca com `%`/`_` escapados), `GET /lojas/{id}` (total de seguidores), novidades da loja, lojas seguidas, cursores forjados (422) |
+| `tests/test_editar_novidades.py` | edição parcial (`preco: null` remove), `criado_em` mantido e `editado_em` preenchido, remoção, novidade de outra loja (404), rota de outra loja (403), cliente (403), reflexo no feed |
+| `tests/test_conta.py` | editar nome/e-mail (login muda), e-mail ocupado (409), corpo inválido (422), excluir com senha (sessões e refresh encerrados, e-mail liberado), senha errada (422), cascata de novidades/seguidores, cache limpo |
+| `tests/test_front.py` | `/` redireciona para `/app/`, arquivos servidos com tipo certo, CSP e cabeçalhos de segurança só no front |
 | `tests/test_cache_feed.py` | HIT/MISS/BYPASS, cache por limite e por cliente, invalidação ao seguir/deixar, publicação visível após o TTL, TTL não renovado, sem Redis |
 | `tests/test_erros.py` / `test_health.py` / `test_openapi.py` | formato único de erro (rota inexistente, 405, JSON malformado), `/health` 200/503, rotas documentadas e protegidas no OpenAPI |
 
 ## 3. Exemplos de chamada
+
+O jeito mais rápido de ver tudo funcionando é o **front de teste em `/app/`**:
+- **Cliente**: lê o feed (com o `X-Cache` de cada resposta), busca lojas, segue e deixa de
+  seguir.
+- **Lojista**: publica, edita e remove novidades.
+- **Os dois**: editam o perfil, trocam a senha e excluem a conta.
+
+O rodapé da página lista cada chamada feita à API, com método, caminho, status, tempo e
+`X-Cache`.
 
 Todos os endpoints (sucesso e erro) estão em [`requests.http`](requests.http) — abra no VS Code
 (extensão REST Client) ou IntelliJ e execute em ordem: os logins guardam o token em variáveis.
@@ -120,6 +134,17 @@ curl 'localhost:8000/lojas?q=ana'
 curl localhost:8000/lojas/1
 curl 'localhost:8000/lojas/1/novidades?limite=10'
 
+# Editar e remover novidade (PATCH parcial; "preco": null remove o preço)
+curl -X PATCH localhost:8000/lojas/1/novidades/1 -H "Authorization: Bearer $LOJA" \
+     -H 'Content-Type: application/json' -d '{"texto": "Coleção de verão com 20% off!"}'
+curl -X DELETE localhost:8000/lojas/1/novidades/1 -H "Authorization: Bearer $LOJA"
+
+# Editar perfil e excluir conta (exclusão exige a senha atual no corpo)
+curl -X PATCH localhost:8000/me -H "Authorization: Bearer $CLIENTE" \
+     -H 'Content-Type: application/json' -d '{"nome": "João da Silva"}'
+curl -X DELETE localhost:8000/me -H "Authorization: Bearer $CLIENTE" \
+     -H 'Content-Type: application/json' -d '{"senha": "senha-forte-123"}'
+
 # Renovar a sessão quando o access expirar (o refresh antigo deixa de valer) e sair
 curl -X POST localhost:8000/auth/refresh -H 'Content-Type: application/json' \
      -d '{"refresh_token": "<refresh_token do login>"}'
@@ -137,7 +162,8 @@ Resposta do feed:
       "loja": {"id": 1, "nome": "Loja da Ana"},
       "texto": "Chegou a coleção de verão!",
       "preco": "199.90",
-      "criado_em": "2026-11-05T22:10:00.123456Z"
+      "criado_em": "2026-11-05T22:10:00.123456Z",
+      "editado_em": null
     }
   ],
   "proximo_cursor": null
@@ -170,12 +196,18 @@ Erros — sempre no mesmo formato:
 | `POST /clientes/{id}/seguindo/{lojaId}` | cliente `{id}` | 201 | 401, 403, 404 `loja_nao_encontrada`, 409 `ja_segue_loja` |
 | `DELETE /clientes/{id}/seguindo/{lojaId}` | cliente `{id}` | 204 | 401, 403, 404 `loja_nao_encontrada`/`nao_segue_loja` |
 | `POST /lojas/{id}/novidades` | loja `{id}` | 201 | 401, 403, 422 |
+| `PATCH /lojas/{id}/novidades/{nid}` | loja `{id}` | 200 | 401, 403, 404 `novidade_nao_encontrada`, 422 |
+| `DELETE /lojas/{id}/novidades/{nid}` | loja `{id}` | 204 | 401, 403, 404 `novidade_nao_encontrada` |
+| `PATCH /lojas/{id}` · `PATCH /clientes/{id}` | dono do `{id}` | 200 | 401, 403, 409 `email_ja_cadastrado`, 422 |
+| `DELETE /lojas/{id}` · `DELETE /clientes/{id}` (corpo `{"senha"}`) | dono do `{id}` | 204 | 401, 403, 422 (senha incorreta) |
 | `GET /clientes/{id}/feed?limite=20&cursor=` | cliente `{id}` | 200 | 401, 403, 422 (`limite` fora de 1–50, cursor inválido) |
 | `GET /health` | — | 200 | 503 `banco_indisponivel` |
 | `GET /me` | cliente ou loja | 200 | 401 |
 | `PUT /me/senha` | cliente ou loja | 204 | 401, 422 (senha atual incorreta, nova inválida) |
 | `GET /me/feed` · `GET /me/seguindo` · `POST`/`DELETE /me/seguindo/{lojaId}` | cliente | 200/201/204 | iguais às rotas com `{id}` |
 | `POST /me/novidades` · `GET /me/novidades` | loja | 201/200 | iguais às rotas com `{id}` |
+| `PATCH`/`DELETE /me/novidades/{nid}` | loja | 200/204 | iguais às rotas com `{id}` |
+| `PATCH /me` · `DELETE /me` (corpo `{"senha"}`) | cliente ou loja | 200/204 | iguais às rotas com `{id}` |
 
 401 = `nao_autenticado` (sem token, inválido ou expirado) · 403 = `acesso_negado` (token de
 outra conta ou de outro tipo).
@@ -194,6 +226,7 @@ app/
   models/          # tabelas SQLAlchemy, um arquivo por entidade, com constraints e índices
   schemas/         # contratos Pydantic de entrada/saída por recurso e validação de formato
   core/            # infraestrutura: config (env), sessão do banco, segurança (JWT/senha), erros
+  front/           # front de teste (HTML + JS puro), servido em /app
   seed.py          # dados de exemplo: python -m app.seed [--reset]
 scripts/           # benchmark do feed (make benchmark)
 migrations/        # Alembic (async); versions/ tem o histórico do schema
@@ -231,10 +264,18 @@ Resumo — o raciocínio completo, com alternativas, está em [`docs/adr/`](docs
   invalida: seriam 100 mil `DEL`). Benchmark com loja de 100 mil seguidores: publicar ~6 ms;
   feed ~6 ms (6 lojas) e ~13 ms (~500 lojas) sem cache, ~2 ms com cache. Sem Redis, a API
   segue funcionando e o rate limit cai para contadores em memória.
+- **Edição e exclusão** ([ADR 0009](docs/adr/0009-edicao-exclusao-e-front.md)):
+  - `PATCH` é parcial e `DELETE` é físico, com cascata no banco.
+  - Editar uma novidade mantém o `criado_em`, para ela não "subir" no feed, e preenche o
+    `editado_em`.
+  - Excluir a conta pede a senha atual e apaga as sessões.
+  - O front de teste é HTML + JS puro, servido pela própria API em `/app`. Fica na mesma
+    origem (sem CORS), tem CSP restrita e não precisa de build.
 - **Modelagem** — 5 tabelas: `refresh_tokens` (hash SHA-256, família, expiração, revogação),
   `lojas` (`email` único + `senha_hash`), `clientes` (`email`
   único + `senha_hash`), `seguidores` (PK composta `(cliente_id, loja_id)`, que impede seguir
-  duas vezes no próprio banco), `novidades` (`preco NUMERIC(12,2)`, CHECKs de texto e preço).
+  duas vezes no próprio banco), `novidades` (`preco NUMERIC(12,2)`, CHECKs de texto e preço,
+  `editado_em`).
   Ids `BIGINT IDENTITY`, datas `timestamptz`.
 - **Unicidade sem corrida** — e-mails e seguir usam `INSERT ... ON CONFLICT DO NOTHING`: duas
   requisições simultâneas não passam pela checagem e quebram com 500; uma recebe 409.
@@ -276,7 +317,10 @@ Detalhadas em [ADR 0004](docs/adr/0004-regras-de-entrada.md). Principais:
 - **Escala do feed**: modelo híbrido (fan-out na escrita para lojas pequenas) se o feed sem
   cache passar de algumas dezenas de ms; invalidar o cache dos seguidores de lojas pequenas
   na publicação; contador desnormalizado de seguidores. Ver ADR 0002 e 0008.
-- Gestão: editar/remover novidade, editar loja/cliente, excluir conta.
+- Gestão: soft delete com "desfazer" e exportação dos dados antes de excluir a conta;
+  invalidar o cache dos feeds quando uma novidade for removida por conteúdo indevido.
+- Front: é ferramenta de teste; um app de verdade teria build, testes de interface
+  (Playwright) e tokens em cookie `HttpOnly` em vez de `sessionStorage`.
 - Logs estruturados (JSON) com id de requisição, métricas e tracing.
 - Teste de carga concorrente (k6/Locust) sobre a API real em rede; o benchmark atual é
   sequencial e em processo.

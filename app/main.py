@@ -7,6 +7,7 @@ from app.core.db import engine
 from app.core.errors import register_error_handlers
 from app.core.redis import get_redis
 from app.routes import auth, clientes, health, lojas, me
+from app.routes.front import montar_front
 
 DESCRICAO = """
 Clientes seguem lojas e acompanham, num feed, as novidades que elas publicam.
@@ -68,6 +69,7 @@ def create_app() -> FastAPI:
     app.include_router(lojas.router)
     app.include_router(clientes.router)
     app.include_router(health.router)
+    montar_front(app)
     return app
 
 

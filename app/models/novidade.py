@@ -1,7 +1,16 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import BigInteger, CheckConstraint, ForeignKey, Identity, Index, Numeric, String
+from sqlalchemy import (
+    BigInteger,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Identity,
+    Index,
+    Numeric,
+    String,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, criado_em_coluna
@@ -18,6 +27,8 @@ class Novidade(Base):
     texto: Mapped[str] = mapped_column(String(TEXTO_MAX), nullable=False)
     preco: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     criado_em: Mapped[datetime] = criado_em_coluna()
+    # Editar não muda criado_em: a novidade mantém a posição no feed.
+    editado_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     loja: Mapped[Loja] = relationship(lazy="raise")
 

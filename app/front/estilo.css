@@ -1,0 +1,418 @@
+:root {
+  color-scheme: light dark;
+  --fundo: #f6f7f9;
+  --superficie: #ffffff;
+  --texto: #1d2129;
+  --suave: #5f6673;
+  --borda: #dde1e7;
+  --destaque: #2563eb;
+  --destaque-texto: #ffffff;
+  --perigo: #c2410c;
+  --sucesso: #15803d;
+  --raio: 10px;
+  --sombra: 0 1px 2px rgb(0 0 0 / 6%);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fundo: #0f1115;
+    --superficie: #181b21;
+    --texto: #e6e8eb;
+    --suave: #9aa1ad;
+    --borda: #2b3039;
+    --destaque: #60a5fa;
+    --destaque-texto: #0b1220;
+    --perigo: #fb923c;
+    --sucesso: #4ade80;
+    --sombra: none;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--fundo);
+  color: var(--texto);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+a {
+  color: var(--destaque);
+}
+
+/* --- Topo ------------------------------------------------------------------ */
+
+.topo {
+  background: var(--superficie);
+  border-bottom: 1px solid var(--borda);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.topo-conteudo,
+.conteudo,
+.rodape {
+  width: 100%;
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.topo-conteudo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 56px;
+  flex-wrap: wrap;
+}
+
+.marca {
+  font-weight: 700;
+  color: var(--texto);
+  text-decoration: none;
+}
+
+.sessao {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--suave);
+  font-size: 0.9rem;
+}
+
+.conteudo {
+  flex: 1;
+  padding-top: 20px;
+  padding-bottom: 32px;
+}
+
+/* --- Abas ------------------------------------------------------------------ */
+
+.abas {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--borda);
+  margin-bottom: 20px;
+  overflow-x: auto;
+}
+
+.aba {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--suave);
+  padding: 10px 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.aba[aria-selected="true"] {
+  color: var(--texto);
+  border-bottom-color: var(--destaque);
+}
+
+/* --- Cartões e listas ------------------------------------------------------ */
+
+.grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.cartao {
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  padding: 16px;
+  box-shadow: var(--sombra);
+}
+
+.cartao h2,
+.cartao h3 {
+  margin: 0 0 12px;
+  font-size: 1.05rem;
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.item-cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.item-loja {
+  font-weight: 600;
+}
+
+.item-texto {
+  margin: 6px 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.preco {
+  font-weight: 700;
+  color: var(--sucesso);
+}
+
+.meta,
+.dica {
+  color: var(--suave);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.vazio {
+  color: var(--suave);
+  text-align: center;
+  padding: 24px 0;
+}
+
+.barra {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.acoes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.selo {
+  display: inline-block;
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  padding: 0 8px;
+  font-size: 0.75rem;
+  color: var(--suave);
+}
+
+.detalhe {
+  border-top: 1px dashed var(--borda);
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+/* --- Formulários ----------------------------------------------------------- */
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+input,
+textarea,
+button {
+  font: inherit;
+}
+
+input,
+textarea {
+  padding: 8px 10px;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  background: var(--fundo);
+  color: var(--texto);
+  font-weight: 400;
+  width: 100%;
+}
+
+textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--destaque);
+  outline-offset: 1px;
+}
+
+[aria-invalid="true"] {
+  border-color: var(--perigo);
+}
+
+.erro-campo {
+  color: var(--perigo);
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.linha {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.linha > * {
+  flex: 1;
+}
+
+.linha > button {
+  flex: 0 0 auto;
+}
+
+.barra > form {
+  flex: 1;
+}
+
+.escolha {
+  display: flex;
+  gap: 16px;
+  flex-direction: row;
+  font-weight: 400;
+}
+
+.escolha label {
+  flex-direction: row;
+  align-items: center;
+  font-weight: 400;
+  gap: 6px;
+}
+
+.escolha input {
+  width: auto;
+}
+
+button {
+  border: 1px solid var(--borda);
+  background: var(--superficie);
+  color: var(--texto);
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+button.primario {
+  background: var(--destaque);
+  border-color: var(--destaque);
+  color: var(--destaque-texto);
+}
+
+button.perigo {
+  color: var(--perigo);
+  border-color: var(--perigo);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.zona-perigo {
+  border-color: var(--perigo);
+}
+
+/* --- Avisos ---------------------------------------------------------------- */
+
+.avisos {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  left: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.aviso {
+  pointer-events: auto;
+  max-width: 420px;
+  width: 100%;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-left: 4px solid var(--sucesso);
+  border-radius: 8px;
+  padding: 10px 14px;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+}
+
+.aviso.erro {
+  border-left-color: var(--perigo);
+}
+
+.aviso ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 0.85rem;
+}
+
+/* --- Registro de chamadas -------------------------------------------------- */
+
+.rodape {
+  padding-bottom: 24px;
+}
+
+.rodape summary {
+  cursor: pointer;
+  color: var(--suave);
+  font-weight: 600;
+}
+
+.tabela-rolagem {
+  overflow-x: auto;
+  margin-top: 8px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--borda);
+  white-space: nowrap;
+}
+
+.status-ok {
+  color: var(--sucesso);
+}
+
+.status-erro {
+  color: var(--perigo);
+}

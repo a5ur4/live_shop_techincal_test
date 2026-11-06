@@ -3,7 +3,16 @@
 from decimal import Decimal
 from typing import Annotated
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field, StringConstraints
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    StringConstraints,
+    model_validator,
+)
+from pydantic_core import PydanticCustomError
 
 from app.models import NOME_MAX, TEXTO_MAX
 
@@ -25,6 +34,21 @@ class Entrada(BaseModel):
     """Corpo de requisição: campos desconhecidos geram 422 (ver ADR 0004)."""
 
     model_config = ConfigDict(extra="forbid")
+
+
+class Edicao(Entrada):
+    """Corpo de PATCH: só os campos enviados mudam, e é preciso enviar ao menos um.
+
+    Campos obrigatórios no cadastro são declarados aqui como `Tipo = None` (sem `| None`):
+    omitir mantém o valor; enviar `null` falha na validação do tipo (422 no campo).
+    Use `model_dump(exclude_unset=True)` para aplicar só o que veio.
+    """
+
+    @model_validator(mode="after")
+    def _ao_menos_um_campo(self):
+        if not self.model_fields_set:
+            raise PydanticCustomError("edicao_vazia", "Informe ao menos um campo para alterar.")
+        return self
 
 
 class Saida(BaseModel):

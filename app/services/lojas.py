@@ -1,4 +1,6 @@
-from sqlalchemy import func, select, tuple_
+from datetime import UTC, datetime
+
+from sqlalchemy import delete, func, select, tuple_
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,6 +13,7 @@ from app.schemas import (
     LojaDetalhe,
     LojaPublica,
     NovidadeCriar,
+    NovidadeEditar,
     NovidadeOut,
     Pagina,
 )
@@ -46,6 +49,44 @@ async def publicar_novidade(session: AsyncSession, loja_id: int, dados: Novidade
     session.add(novidade)
     await session.commit()
     return novidade
+
+
+def _novidade_nao_encontrada(loja_id: int, novidade_id: int) -> NaoEncontradoError:
+    # Novidade de outra loja recebe a mesma resposta de inexistente: não revela que existe.
+    return NaoEncontradoError(
+        f"Novidade {novidade_id} não encontrada na loja {loja_id}.",
+        codigo="novidade_nao_encontrada",
+    )
+
+
+async def editar_novidade(
+    session: AsyncSession, loja_id: int, novidade_id: int, dados: NovidadeEditar
+) -> Novidade:
+    """Edição parcial. `criado_em` não muda (a novidade não "sobe" no feed); marca `editado_em`.
+
+    Como publicar, editar não invalida o cache dos feeds: aparece em até FEED_CACHE_TTL_S.
+    """
+    novidade = await session.scalar(
+        select(Novidade).where(Novidade.id == novidade_id, Novidade.loja_id == loja_id)
+    )
+    if novidade is None:
+        raise _novidade_nao_encontrada(loja_id, novidade_id)
+    for campo, valor in dados.model_dump(exclude_unset=True).items():
+        setattr(novidade, campo, valor)
+    novidade.editado_em = datetime.now(UTC)
+    await session.commit()
+    return novidade
+
+
+async def remover_novidade(session: AsyncSession, loja_id: int, novidade_id: int) -> None:
+    removida = await session.scalar(
+        delete(Novidade)
+        .where(Novidade.id == novidade_id, Novidade.loja_id == loja_id)
+        .returning(Novidade.id)
+    )
+    if removida is None:
+        raise _novidade_nao_encontrada(loja_id, novidade_id)
+    await session.commit()
 
 
 def _escapar_like(termo: str) -> str:
