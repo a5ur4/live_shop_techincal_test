@@ -6,9 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
 from app.core.errors import AcessoNegadoError, NaoAutenticadoError
+from app.core.redis import ResilientRedis, get_redis
 from app.core.security import Identidade, TipoConta, ler_token
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
+RedisDep = Annotated[ResilientRedis, Depends(get_redis)]
 
 ClienteId = Annotated[int, Path(description="Id do cliente.", examples=[1])]
 LojaId = Annotated[int, Path(description="Id da loja.", examples=[1])]

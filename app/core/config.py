@@ -17,6 +17,11 @@ class Settings(BaseSettings):
     # quem segue milhares de lojas) segurando conexões indefinidamente.
     db_statement_timeout_ms: int = 5000
 
+    # Redis (cache do feed e rate limit). Vazio desliga os dois; a API segue funcionando.
+    redis_url: str | None = "redis://localhost:6379/0"
+    test_redis_url: str = "redis://localhost:6379/15"
+    redis_timeout_s: float = 0.25
+
     # Autenticação (OAuth2 password flow + JWT). Sem JWT_SECRET definido, uma chave
     # aleatória é gerada a cada start: serve para desenvolvimento, mas invalida os
     # tokens ao reiniciar e não funciona com várias instâncias. Ver docs/adr/0007.
@@ -25,7 +30,7 @@ class Settings(BaseSettings):
     jwt_algoritmo: str = "HS256"
     jwt_expira_minutos: int = 30
 
-    @field_validator("jwt_secret", mode="before")
+    @field_validator("jwt_secret", "redis_url", mode="before")
     @classmethod
     def _vazio_e_none(cls, valor: str | None) -> str | None:
         # docker compose passa "" quando a variável não existe no host.

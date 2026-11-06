@@ -13,8 +13,8 @@ down: ## Derruba os containers (mantém os dados)
 logs: ## Acompanha os logs da API
 	docker compose logs -f api
 
-db: ## Sobe só o Postgres (para rodar API/testes localmente)
-	docker compose up -d --wait db
+db: ## Sobe Postgres e Redis (para rodar API/testes localmente)
+	docker compose up -d --wait db redis
 
 dev: db migrate ## API local com reload (requer uv)
 	uv run fastapi dev app/main.py

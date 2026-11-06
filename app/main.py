@@ -1,6 +1,11 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
+from app.core.db import engine
 from app.core.errors import register_error_handlers
+from app.core.redis import get_redis
 from app.routes import auth, clientes, health, lojas, me
 
 DESCRICAO = """
@@ -42,12 +47,20 @@ TAGS = [
 ]
 
 
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    yield
+    await get_redis().aclose()
+    await engine.dispose()
+
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title="Feed de Novidades",
         version="0.1.0",
         description=DESCRICAO,
         openapi_tags=TAGS,
+        lifespan=lifespan,
     )
     register_error_handlers(app)
     app.include_router(auth.router)
